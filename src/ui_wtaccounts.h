@@ -60,6 +60,10 @@
 #include <string>
 #include <iostream>
 
+#include <time.h>
+
+
+
 class Ui_WtAccounts
 {
 
@@ -560,17 +564,16 @@ public:
 							year_combo_box->setStyleClass(Wt::WString::fromUTF8("form-control form-control"));
 							year_combo_box->setInline(0);
 							year_combo_box->setEmptyText(Wt::WString::fromUTF8(""));
-							year_combo_box->addItem(Wt::WString::fromUTF8("2000"));
-												year_combo_box->addItem(Wt::WString::fromUTF8("2001"));
-												year_combo_box->addItem(Wt::WString::fromUTF8("2002"));
-												year_combo_box->addItem(Wt::WString::fromUTF8("2003"));
-												year_combo_box->addItem(Wt::WString::fromUTF8("2004"));
-												year_combo_box->addItem(Wt::WString::fromUTF8("2005"));
-												year_combo_box->addItem(Wt::WString::fromUTF8("2010"));
+							year_combo_box->addItem(Wt::WString::fromUTF8("2010"));
+												year_combo_box->addItem(Wt::WString::fromUTF8("2011"));
+												year_combo_box->addItem(Wt::WString::fromUTF8("2012"));
+												year_combo_box->addItem(Wt::WString::fromUTF8("2013"));
+												year_combo_box->addItem(Wt::WString::fromUTF8("2014"));
 												year_combo_box->addItem(Wt::WString::fromUTF8("2015"));
 												year_combo_box->addItem(Wt::WString::fromUTF8("2016"));
 												year_combo_box->addItem(Wt::WString::fromUTF8("2017"));
 												year_combo_box->addItem(Wt::WString::fromUTF8("2018"));
+												year_combo_box->setCurrentIndex(7);
 
 							month_combo_box = new Wt::WComboBox(user_account_right_container);
 							month_combo_box->setId("month_combo_box");
@@ -589,6 +592,10 @@ public:
 												month_combo_box->addItem(Wt::WString::fromUTF8("Октябрь"));
 												month_combo_box->addItem(Wt::WString::fromUTF8("Ноябрь"));
 												month_combo_box->addItem(Wt::WString::fromUTF8("Декабрь"));
+												time_t theTime = time(NULL);
+												struct tm *aTime = localtime(&theTime);
+												month_combo_box->setCurrentIndex(aTime->tm_mon);
+
 
 							refresh_button = new Wt::WPushButton(user_account_right_container);
 							refresh_button->setId("refresh_button");

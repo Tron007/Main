@@ -21,7 +21,7 @@ int dor=0;
 /* rand example: guess the number */
 #include <stdio.h>      /* printf, scanf, puts, NULL */
 #include <stdlib.h>     /* srand, rand */
-#include <time.h>       /* time */
+
 
 WtAccounts::WtAccounts(const Wt::WEnvironment& env) : Wt::WApplication(env), ui(new Ui_WtAccounts)
 {
@@ -5101,12 +5101,18 @@ extern void WtAccounts::subscriber_payment_transaction_dialog()
     // Process the dialog result.
     dialog->finished().connect(std::bind([=] () {
 	if (dialog->result() == Wt::WDialog::Accepted)
-	{
+	{Wt::WMessageBox *messageBox;
 
 
 		  int last_mouth_dept=0;
 		  int chect_mouth_dept=0;
 		  int sum_needTo_pay_thisM=0;
+
+		  std::string payment_quantity = boost::lexical_cast<std::string>(payment_quantity_edit->text());
+		  std::string payment_date = boost::lexical_cast<std::string>(payment_date_edit->text());
+		  std::string payment_type = payment_type_edit->text().toUTF8();
+		  std::string payment_description = payment_description_text_area->text().toUTF8();
+		  std::string bank = bank_edit->text().toUTF8();
 
           			mysql_init(&mysql);
 					conn=mysql_real_connect(&mysql, server, user, password, database, 0, 0, 0);
@@ -5116,12 +5122,26 @@ extern void WtAccounts::subscriber_payment_transaction_dialog()
 					}
 					mysql_query(&mysql,"SET NAMES 'UTF8'");
 
+					std::string Sum_to_this_mouth = "SELECT sum(quantity) FROM account_database.subscriber_transaction WHERE subscriber_id='"+subscriber_id_view_mode+"' "
+							"AND  month(transaction_date)=month('"+payment_date+"') AND year(transaction_date)=year('"+payment_date+"') AND transaction_type='Начисление'";
 
-					std::string payment_quantity = boost::lexical_cast<std::string>(payment_quantity_edit->text());
-					std::string payment_date = boost::lexical_cast<std::string>(payment_date_edit->text());
-					std::string payment_type = payment_type_edit->text().toUTF8();
-					std::string payment_description = payment_description_text_area->text().toUTF8();
-					std::string bank = bank_edit->text().toUTF8();
+					query_state = mysql_query(conn, Sum_to_this_mouth.c_str());
+					if(query_state!=0)
+					{
+						std::cout<<mysql_error(conn)<<std::endl<<std::endl;
+					}
+					res=mysql_store_result(conn);
+
+					if ((row=mysql_fetch_row(res))!=NULL)
+					{if (row[0]!=NULL){
+
+						sum_needTo_pay_thisM=std::atoi(row[0]);
+						std::cout<<sum_needTo_pay_thisM<<std::endl;
+						mysql_free_result(res);
+
+
+
+
 
 
 
@@ -5180,23 +5200,10 @@ extern void WtAccounts::subscriber_payment_transaction_dialog()
 				{
 					mysql_free_result(res);
 
-					std::string Sum_to_this_mouth = "SELECT sum(quantity) FROM account_database.subscriber_transaction WHERE subscriber_id='"+subscriber_id_view_mode+"' "
-							"AND  month(transaction_date)=month('"+payment_date+"') AND year(transaction_date)=year('"+payment_date+"') AND transaction_type='Начисление'  ";
 
-									query_state = mysql_query(conn, Sum_to_this_mouth.c_str());
-									if(query_state!=0)
-									{
-										std::cout<<mysql_error(conn)<<std::endl<<std::endl;
-									}
-									res=mysql_store_result(conn);
-									std::cout<<"Mysql sum"<<std::endl<<std::endl;
-									if ((row=mysql_fetch_row(res))!=NULL)
-									{
-										sum_needTo_pay_thisM=std::atoi(row[0]);
-										std::cout<<sum_needTo_pay_thisM<<std::endl;
-									}
 
-					mysql_free_result(res);
+
+
 
 					Sum_to_this_mouth = "SELECT quantity FROM account_database.subscriber_transaction WHERE subscriber_id='"+subscriber_id_view_mode+"'"
 									"AND  month(transaction_date)=(month('"+payment_date+"'))-1 AND year(transaction_date)=year('"+payment_date+"') AND transaction_type='Долг'";
@@ -5214,10 +5221,12 @@ extern void WtAccounts::subscriber_payment_transaction_dialog()
 										std::cout<<std::stoi(payment_quantity)<<"quantity1 "<<std::endl;
 										sum_needTo_pay_thisM-=std::stoi(payment_quantity);
 										std::cout<<sum_needTo_pay_thisM<<"quantity2 "<<std::endl;
+										mysql_free_result(res);
 									}
-									else {sum_needTo_pay_thisM-=std::stoi(payment_quantity);}
-									mysql_free_result(res);
+									else {sum_needTo_pay_thisM-=std::stoi(payment_quantity);std::cout<<"Mysql sum3"<<std::endl<<std::endl;}
 
+
+									std::cout<<"Mysql sum2"<<std::endl<<std::endl;
 									mysql_insert_new_payment_transaction = "INSERT INTO subscriber_transaction (subscriber_id, transaction_type, "
 											"transaction_date, description, quantity)  "
 											"VALUES ('"+subscriber_id_view_mode+"', 'Долг', "
@@ -5237,6 +5246,14 @@ extern void WtAccounts::subscriber_payment_transaction_dialog()
 
 
 				}
+				}else{
+	    			messageBox = new Wt::WMessageBox(Wt::WString::fromUTF8("Ошибка"), Wt::WString::fromUTF8("Некорректный месяц,отсутствуют услуги за которые требуются оплата"), Wt::Information, Wt::Yes | Wt::No);
+	    			messageBox->buttonClicked().connect(std::bind([=] () {
+	    			delete messageBox;
+	    			}));
+
+	    			messageBox->show();
+	    		}}
 
 
 
@@ -7286,26 +7303,26 @@ int total_sum=0;
 		std::string Adress_rep=row[0];
 		f =out3.find("Adress_");
 		out3.replace(f,std::string("Adress_").length(), Adress_rep);}
-
+		mysql_free_result(res);
 ///
 		//Phone number replace
-//		mysql_Data_for_report = "SELECT number FROM account_database.phone_numbers where subscriber_id='"+subscriber_id_view_mode+"'";
-//
-//				query_state=mysql_query(conn, mysql_Data_for_report.c_str());
-//
-//				if(query_state!=0)
-//							{
-//							std::cout<<mysql_error(conn)<<std::endl<<std::endl;
-//							}
-//				res=mysql_store_result(conn);
-//				std::string P_numb_rep="";
-//				if((row=mysql_fetch_row(res))!=NULL) {
-//				P_numb_rep=row[0];
-//				}
-//				f =out3.find("P_number");
-//				out3.replace(f,std::string("P_number").length(), P_numb_rep);
-//				mysql_free_result(res);
-//
+		mysql_Data_for_report = "SELECT number FROM account_database.phone_numbers where subscriber_id='"+subscriber_id_view_mode+"'";
+
+				query_state=mysql_query(conn, mysql_Data_for_report.c_str());
+
+				if(query_state!=0)
+							{
+							std::cout<<mysql_error(conn)<<std::endl<<std::endl;
+							}
+				res=mysql_store_result(conn);
+				std::string P_numb_rep="";
+				if((row=mysql_fetch_row(res))!=NULL) {
+				P_numb_rep=row[0];
+				}
+				f =out3.find("P_number");
+				out3.replace(f,std::string("P_number").length(), P_numb_rep);
+				mysql_free_result(res);
+
 //		///
 
 		//code for adding service
@@ -7313,9 +7330,9 @@ int total_sum=0;
 				std::string Service = out3.substr(out3.find("<!--ServiceStart-->")+std::string("<!--ServiceStart-->").length(),numberforskip);
 
 
-				mysql_Data_for_report = "SELECT description,quantity FROM account_database.subscriber_transaction WHERE subscriber_id"
-						" IN  (SELECT subscriber_id FROM  account_database.subscriber WHERE full_name = '"+changedSubscriberName+"')"
-							"AND  month(transaction_date)=month(str_to_date('"+ResulMonthCombo_index_string+"','%m')) AND year(transaction_date)=year(str_to_date('"+ResulYearCombo+"','%Y'))";
+				mysql_Data_for_report = "SELECT description,quantity FROM account_database.subscriber_transaction WHERE subscriber_id='"+subscriber_id_view_mode+"'"
+						//" IN  (SELECT subscriber_id FROM  account_database.subscriber WHERE full_name = '"+changedSubscriberName+"')"
+							"AND  month(transaction_date)=month(str_to_date('"+ResulMonthCombo_index_string+"','%m')) AND year(transaction_date)=year(str_to_date('"+ResulYearCombo+"','%Y')) AND transaction_type='Начисление'";
 						    int row_number = 0;
 
 						    query_state=mysql_query(conn, mysql_Data_for_report.c_str());
@@ -7368,10 +7385,70 @@ int total_sum=0;
 							numberforskip+=256+TempLength1.length()+1;//220 is size of pure HTML wiout any text + text that we added to skip forvard
 									     				}
 
+									      mysql_free_result(res);
 
+									      int debt_cost=0;
+									      int debt_last_mouth=0;
+									      std::string Sum_to_this_mouth="";
+									      Sum_to_this_mouth = "SELECT quantity FROM account_database.subscriber_transaction WHERE subscriber_id='"+subscriber_id_view_mode+"'"
+									      "AND  month(transaction_date)=month(str_to_date('"+ResulMonthCombo_index_string+"','%m'))-1 AND year(transaction_date)=year(str_to_date('"+ResulYearCombo+"','%Y')) AND transaction_type='Долг'";
+									      query_state = mysql_query(conn, Sum_to_this_mouth.c_str());
+									      if(query_state!=0)
+									      {
+									    	  std::cout<<mysql_error(conn)<<std::endl<<std::endl;
+									      }
+									      res=mysql_store_result(conn);
 
+									      if ((row=mysql_fetch_row(res))!=NULL)
+									      {
+									    	  debt_last_mouth=std::atoi(row[0]);
+									      } else debt_last_mouth=0;
 
 									      mysql_free_result(res);
+
+									      Sum_to_this_mouth = "SELECT quantity,transaction_id FROM account_database.subscriber_transaction WHERE subscriber_id='"+subscriber_id_view_mode+"'"
+									    "AND  month(transaction_date)=month(str_to_date('"+ResulMonthCombo_index_string+"','%m'))"
+									    " AND year(transaction_date)=year(str_to_date('"+ResulYearCombo+"','%Y')) AND transaction_type='Долг'";
+									      query_state = mysql_query(conn, Sum_to_this_mouth.c_str());
+
+									      if(query_state!=0)
+									      {
+									    	  std::cout<<mysql_error(conn)<<std::endl<<std::endl;
+									      }
+									      res=mysql_store_result(conn);
+
+									      if ((row=mysql_fetch_row(res))!=NULL)
+									      {
+									    	  std::cout<<"FOUND "<<row[0]<<std::endl;
+									    	  debt_cost=std::atoi(row[0]);
+                                        	  mysql_free_result(res);
+									      }
+									      else
+									      {	 std::cout<<"FOUND NOT"<<std::endl;
+									    	  debt_cost+=debt_last_mouth;
+									        debt_cost+=total_sum;
+
+									    	  Sum_to_this_mouth = "INSERT INTO subscriber_transaction (subscriber_id, transaction_type, "
+									    			  "transaction_date, description, quantity)  "
+									    			  "VALUES ('"+subscriber_id_view_mode+"', 'Долг', "
+													  "str_to_date('1,'"+ResulMonthCombo_index_string+"','"+ResulYearCombo+"'', '%d,%m,%Y'), 'Пересчет,прибовляем сумму долга прошлого месяца к стоимости услуг в этом, онимаем оплаченые', '"+std::to_string(debt_cost)+"')";
+
+									    	  query_state = mysql_query(conn, Sum_to_this_mouth.c_str());
+
+
+									    	  if(query_state!=0)
+									    	  {
+									    		  std::cout<<mysql_error(conn)<<std::endl<<std::endl;
+									    	  }
+
+
+
+
+
+
+									      }
+
+
 										  mysql_close(conn);
 
 
@@ -7381,12 +7458,21 @@ int total_sum=0;
 										  f = out3.find("COL_2");
 										  out3.replace(f, std::string("COL_2").length(), std::to_string(total_sum));
 
+
 										  f = out3.find("COL_1");
-										  out3.replace(f, std::string("COL_1").length(), "0");
+										  out3.replace(f, std::string("COL_1").length(), std::to_string(debt_last_mouth));
 										  f = out3.find("COL_3");
 										  out3.replace(f, std::string("COL_3").length(), "0");
 										  f = out3.find("COL_4");
-										  out3.replace(f, std::string("COL_4").length(), "0");
+										  out3.replace(f, std::string("COL_4").length(), std::to_string((debt_last_mouth+total_sum)-debt_cost));
+
+										  f = out3.find("COL_5");
+										  if (debt_cost<0) debt_cost=0;
+										  out3.replace(f, std::string("COL_5").length(), std::to_string(debt_cost));
+
+
+
+
 
 						out3+="<div style=\"height: " +std::to_string(NubrOffreetabs)+" px;\">&nbsp;</div>";//add blank space befor next report
 
