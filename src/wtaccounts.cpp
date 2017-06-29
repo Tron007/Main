@@ -16,6 +16,7 @@
 //herdre
 #include <iostream>
 #include <map>
+int dor=0;
 
 /* rand example: guess the number */
 #include <stdio.h>      /* printf, scanf, puts, NULL */
@@ -69,9 +70,21 @@ WtAccounts::WtAccounts(const Wt::WEnvironment& env) : Wt::WApplication(env), ui(
 	ui->nv_pp_item5->clicked().connect(boost::bind(&WtAccounts::manage_new_call_tariff_dialog, this));
 
 	// herdre functions
-	ui->user_search_button->clicked().connect(boost::bind(&WtAccounts::search_subscribers, this, "search"));
     ui->refresh_button->clicked().connect(boost::bind(&WtAccounts::subscriber_fullName_changed, this));
-  //  ui->refresh_button->clicked()
+    //Drop out M (Ama data,Netflow data)(make and configure report)
+   // ui->p_account_operation_split_button_popup->itemSelected().connect(boost::bind(&WtAccounts::p_account_operation_CHECK, this, "PopUp"));
+
+    //Search
+    //ui->user_search_edit->changed().connect(boost::bind(&WtAccounts::search_subscribers, this, "Search"));
+    ui->user_search_button->clicked().connect(boost::bind(&WtAccounts::search_subscribers, this, "Search"));
+    //Save and close configure of Report
+    ui->save_close_button_report_edit->clicked().connect(boost::bind(&WtAccounts::Configure_edited_report_data_Report, this, "save"));
+
+    //fast creat report
+    ui->new_report_button->clicked().connect(boost::bind(&WtAccounts::p_account_operation_create_Report, this, "fast"));
+
+
+    //ui->refresh_button->clicked()
 	// search when you change text in edit for now it's comment because may slow program
 	// ui->user_search_edit->changed().connect(boost::bind(&WtAccounts::search_subscribers, this, "search"));
 }
@@ -524,7 +537,139 @@ extern void WtAccounts::edit_subscriber_load_data()
 
 
 
+//PDF func
+//Below is the "Rendering HTML to PDF" code from the widget gallery, with the new container widget for a target.
+namespace {
+    void HPDF_STDCALL error_handler(HPDF_STATUS error_no, HPDF_STATUS detail_no,
+               void *user_data) {
+    fprintf(stderr, "libharu error: error_no=%04X, detail_no=%d\n",
+        (unsigned int) error_no, (int) detail_no);
+    }
+}
 
+class ReportResource : public Wt::WResource
+{
+public:
+	 std::string nate;
+	 std::string nate2;
+	 std::string nate3;
+	 int number;
+
+  ReportResource(Wt::WContainerWidget* target, Wt::WObject* parent = 0)
+    : Wt::WResource(parent),
+    _target(NULL)
+  {
+    suggestFileName("report.pdf");
+    _target = target;
+  }
+
+
+//   ReportResource(Wt::WContainerWidget* target,int d=0)
+//	     :number(d)
+//	   {
+//	     suggestFileName("report.pdf");
+//	     _target = target;
+//	   }
+
+   ReportResource(Wt::WContainerWidget* target,std::string name="",std::string text="")
+        :nate(name),nate2(text)
+      {
+  	std::string Obriv=" ";
+  	std::size_t pos_for_Obriv;
+
+  	//for addition name in tab
+  	pos_for_Obriv = nate.find(' ');
+  	Obriv += nate.substr(0,pos_for_Obriv);
+
+
+        suggestFileName(Wt::WString::fromUTF8(Obriv)+".pdf");
+        _target = target;
+      }
+
+/*
+  ReportResource(Wt::WContainerWidget* target,std::string name="",std::string Number="",std::string rewq="")
+      :nate(name),nate2(Number),nate3(rewq)
+    {
+	std::string Obriv=" ";
+	std::size_t pos_for_Obriv;
+
+	//for addition name in tab
+	pos_for_Obriv = nate.find(' ');
+	Obriv += nate.substr(0,pos_for_Obriv);
+
+
+      suggestFileName(Wt::WString::fromUTF8(Obriv)+".pdf");
+      _target = target;
+    }
+*/
+  virtual void handleRequest(const Wt::Http::Request& request, Wt::Http::Response& response)
+  {
+    response.setMimeType("application/pdf");
+
+    HPDF_Doc pdf = HPDF_New(error_handler, 0);
+
+	// Note: UTF-8 encoding (for TrueType fonts) is only available since libharu 2.3.0 !
+	HPDF_UseUTFEncodings(pdf);
+
+
+    renderReport(pdf);
+    int ddsfd;
+    HPDF_SaveToStream(pdf);
+    unsigned int size = HPDF_GetStreamSize(pdf);
+    HPDF_BYTE *buf = new HPDF_BYTE[size];
+    HPDF_ReadFromStream (pdf, buf, &size);
+    HPDF_Free(pdf);
+    response.out().write((char*)buf, size);
+    delete[] buf;
+  }
+
+private:
+
+  Wt::WContainerWidget* _target;
+
+  void renderReport(HPDF_Doc pdf)
+  {
+    std::stringstream ss;
+
+
+    _target->htmlText(ss);
+    std::string out = ss.str();
+    std::string out_id = _target->id();
+    std::string out_parent_id = _target->parent()->id();
+
+    std::string STRING;
+
+
+		//ss.str()
+  renderPdf(Wt::WString::fromUTF8(nate2), pdf);
+
+  }
+
+  void renderPdf(const Wt::WString& html, HPDF_Doc pdf)
+  {
+
+    HPDF_Page page = HPDF_AddPage(pdf);
+    HPDF_Page_SetSize(page, HPDF_PAGE_SIZE_A4, HPDF_PAGE_PORTRAIT);
+   //HPDF_Page_SetSize(page, HPDF_PAGE_SIZE_A4, HPDF_PAGE_LANDSCAPE);
+    int d;
+    Wt::Render::WPdfRenderer renderer(pdf, page);
+  // renderer.useStyleSheet("/resources/fgd.css");
+
+    const char *fontname;
+    HPDF_Font font;
+
+ //   fontname = HPDF_LoadTTFontFromFile(pdf, "FreeSans.ttf", HPDF_TRUE);
+ //   font = HPDF_GetFont(pdf, fontname, "UTF-8");
+   // HPDF_Page_SetFontAndSize(page, font, 8);
+
+    //renderer.st
+   //renderer.setMargin(0);
+ // renderer.setDpi(110);
+   renderer.render(html);
+  }
+};
+
+//PDF func END
 
 
 
@@ -4838,18 +4983,20 @@ extern void WtAccounts::subscriber_add_one_time_services_dialog()
 // subscriber payment transaction dialog window
 extern void WtAccounts::subscriber_payment_transaction_dialog()
 {
+
+	Wt::WMessageBox *messageBox;
+	std::string changedSubscriberName = "";
+	Wt::WTreeNode *selected_node; // operator* returns contents of an interator
+	std::set<Wt::WTreeNode* > highlightedRows = ui->user_treeTable->tree()->selectedNodes();
+	if (!highlightedRows.empty() && (subscriber_id_view_mode != ""))
+	{
+
+
+
+
     Wt::WDialog *dialog = new Wt::WDialog(Wt::WString::fromUTF8("Оплата"));
 
     dialog->resize(700, 400);
-
-	mysql_init(&mysql);
-	conn=mysql_real_connect(&mysql, server, user, password, database, 0, 0, 0);
-	if(conn==NULL)
-	{
-	    std::cout<<mysql_error(&mysql)<<std::endl<<std::endl;
-	}
-	mysql_query(&mysql,"SET NAMES 'UTF8'");
-
 
 
     // payment quantity label and edit
@@ -4957,38 +5104,26 @@ extern void WtAccounts::subscriber_payment_transaction_dialog()
 	{
 
 
+		  int last_mouth_dept=0;
+		  int chect_mouth_dept=0;
+		  int sum_needTo_pay_thisM=0;
+
+          			mysql_init(&mysql);
+					conn=mysql_real_connect(&mysql, server, user, password, database, 0, 0, 0);
+					if(conn==NULL)
+					{
+					    std::cout<<mysql_error(&mysql)<<std::endl<<std::endl;
+					}
+					mysql_query(&mysql,"SET NAMES 'UTF8'");
 
 
+					std::string payment_quantity = boost::lexical_cast<std::string>(payment_quantity_edit->text());
+					std::string payment_date = boost::lexical_cast<std::string>(payment_date_edit->text());
+					std::string payment_type = payment_type_edit->text().toUTF8();
+					std::string payment_description = payment_description_text_area->text().toUTF8();
+					std::string bank = bank_edit->text().toUTF8();
 
 
-
-
-
-
-
-
-
-	    Wt::WMessageBox *messageBox;
-		std::string changedSubscriberName = "";
-		Wt::WTreeNode *selected_node; // operator* returns contents of an interator
-		std::set<Wt::WTreeNode* > highlightedRows = ui->user_treeTable->tree()->selectedNodes();
-		if (!highlightedRows.empty() && (subscriber_id_view_mode != ""))
-		{
-
-			mysql_init(&mysql);
-			conn=mysql_real_connect(&mysql, server, user, password, database, 0, 0, 0);
-			if(conn==NULL)
-			{
-			    std::cout<<mysql_error(&mysql)<<std::endl<<std::endl;
-			}
-			mysql_query(&mysql,"SET NAMES 'UTF8'");
-
-
-			std::string payment_quantity = boost::lexical_cast<std::string>(payment_quantity_edit->text());
-			std::string payment_date = boost::lexical_cast<std::string>(payment_date_edit->text());
-			std::string payment_type = payment_type_edit->text().toUTF8();
-			std::string payment_description = payment_description_text_area->text().toUTF8();
-			std::string bank = bank_edit->text().toUTF8();
 
 			std::string mysql_insert_new_payment_transaction = "INSERT INTO subscriber_transaction (subscriber_id, transaction_type, "
 																"transaction_date, description, quantity)  "
@@ -5002,7 +5137,147 @@ extern void WtAccounts::subscriber_payment_transaction_dialog()
 			{
 			   std::cout<<mysql_error(conn)<<std::endl<<std::endl;
 			}
-			mysql_close(conn);
+
+
+
+
+
+
+				std::string Sum_to_this_mouth = "SELECT quantity,transaction_id FROM account_database.subscriber_transaction WHERE subscriber_id='"+subscriber_id_view_mode+"'"
+				"AND  month(transaction_date)=month('"+payment_date+"') AND year(transaction_date)=year('"+payment_date+"') AND transaction_type='Долг'";
+				query_state = mysql_query(conn, Sum_to_this_mouth.c_str());
+
+				if(query_state!=0)
+				{
+					std::cout<<mysql_error(conn)<<std::endl<<std::endl;
+				}
+				res=mysql_store_result(conn);
+
+				if ((row=mysql_fetch_row(res))!=NULL)
+				{
+					chect_mouth_dept=std::atoi(row[0]);
+					std::cout<<chect_mouth_dept<<"quantity1 "<<std::endl;
+
+					chect_mouth_dept-=std::stoi(payment_quantity);
+
+
+					mysql_insert_new_payment_transaction = "UPDATE account_database.subscriber_transaction SET quantity='"+std::to_string(chect_mouth_dept)+"' WHERE transaction_id='"+row[1]+"'";
+					mysql_free_result(res);
+					query_state = mysql_query(conn, mysql_insert_new_payment_transaction.c_str());
+
+
+					if(query_state!=0)
+					{
+						std::cout<<mysql_error(conn)<<std::endl<<std::endl;
+					}
+
+
+
+
+					mysql_close(conn);
+				}
+				else
+				{
+					mysql_free_result(res);
+
+					std::string Sum_to_this_mouth = "SELECT sum(quantity) FROM account_database.subscriber_transaction WHERE subscriber_id='"+subscriber_id_view_mode+"' "
+							"AND  month(transaction_date)=month('"+payment_date+"') AND year(transaction_date)=year('"+payment_date+"') AND transaction_type='Начисление'  ";
+
+									query_state = mysql_query(conn, Sum_to_this_mouth.c_str());
+									if(query_state!=0)
+									{
+										std::cout<<mysql_error(conn)<<std::endl<<std::endl;
+									}
+									res=mysql_store_result(conn);
+									std::cout<<"Mysql sum"<<std::endl<<std::endl;
+									if ((row=mysql_fetch_row(res))!=NULL)
+									{
+										sum_needTo_pay_thisM=std::atoi(row[0]);
+										std::cout<<sum_needTo_pay_thisM<<std::endl;
+									}
+
+					mysql_free_result(res);
+
+					Sum_to_this_mouth = "SELECT quantity FROM account_database.subscriber_transaction WHERE subscriber_id='"+subscriber_id_view_mode+"'"
+									"AND  month(transaction_date)=(month('"+payment_date+"'))-1 AND year(transaction_date)=year('"+payment_date+"') AND transaction_type='Долг'";
+									query_state = mysql_query(conn, Sum_to_this_mouth.c_str());
+
+									if(query_state!=0)
+									{
+										std::cout<<mysql_error(conn)<<std::endl<<std::endl;
+									}
+
+									res=mysql_store_result(conn);
+									if ((row=mysql_fetch_row(res))!=NULL)
+									{
+										sum_needTo_pay_thisM+=std::atoi(row[0]);
+										std::cout<<std::stoi(payment_quantity)<<"quantity1 "<<std::endl;
+										sum_needTo_pay_thisM-=std::stoi(payment_quantity);
+										std::cout<<sum_needTo_pay_thisM<<"quantity2 "<<std::endl;
+									}
+									else {sum_needTo_pay_thisM-=std::stoi(payment_quantity);}
+									mysql_free_result(res);
+
+									mysql_insert_new_payment_transaction = "INSERT INTO subscriber_transaction (subscriber_id, transaction_type, "
+											"transaction_date, description, quantity)  "
+											"VALUES ('"+subscriber_id_view_mode+"', 'Долг', "
+											"'"+payment_date+"', 'Пересчет,прибовляем сумму долга прошлого месяца к стоимости услуг в этом, онимаем оплаченые', '"+std::to_string(sum_needTo_pay_thisM)+"')";
+
+									query_state = mysql_query(conn, mysql_insert_new_payment_transaction.c_str());
+
+
+									if(query_state!=0)
+									{
+										std::cout<<mysql_error(conn)<<std::endl<<std::endl;
+									}
+
+
+
+									mysql_close(conn);
+
+
+				}
+
+
+
+
+
+
+
+//
+//			SELECT sum(quantity) FROM account_database.subscriber_transaction WHERE
+//			    subscriber_id IN (SELECT
+//			            subscriber_id
+//			        FROM
+//			            account_database.subscriber
+//			        WHERE
+//			            full_name = 'Амирова  Роза  Сериковна') AND transaction_type='Начисление'
+//			AND  month(transaction_date)='2' AND year(transaction_date)='2017';
+//
+//			// add node form mysql table
+//			query_state=mysql_query(conn, "SELECT * FROM subscriber_services WHERE charging_period = 'Ручное начисление'");
+//			if(query_state!=0)
+//			{
+//				std::cout<<mysql_error(conn)<<std::endl<<std::endl;
+//			}
+//			res=mysql_store_result(conn);
+//			std::cout<<"MySQL Values in the amaDB Table."<<std::endl<<std::endl;
+//			while((row=mysql_fetch_row(res))!=NULL)
+//			{
+//				tree_node  = new Wt::WTreeTableNode(Wt::WString::fromUTF8(row[1]), 0, tree_root);
+//				tree_node ->setColumnWidget(1, new Wt::WText(Wt::WString::fromUTF8(row[7])));
+//			}
+//
+//			mysql_free_result(res);
+
+
+
+
+
+
+
+
+
 	/*
 			ip_address_table->clear();
 			ip_address_table->elementAt(0, 0)->addWidget(new Wt::WText(Wt::WString::fromUTF8("IP адрес")));
@@ -5052,27 +5327,44 @@ extern void WtAccounts::subscriber_payment_transaction_dialog()
 			mysql_free_result(res);
 			mysql_close(conn);
 */
-		} else
-		{
-			messageBox = new Wt::WMessageBox(Wt::WString::fromUTF8("Ошибка"), Wt::WString::fromUTF8("Не выбран абонент"), Wt::Information, Wt::Yes | Wt::No);
-			messageBox->buttonClicked().connect(std::bind([=] () {
-			delete messageBox;
-			}));
-
-			messageBox->show();
-		}
-
-
+//
+//
 
 	}
 	else
 	{
 	}
 
+
+
 	delete dialog;
+
+
+
+
     }));
 
+
     dialog->show();
+
+
+
+
+
+
+
+
+    } else
+    		{
+    			messageBox = new Wt::WMessageBox(Wt::WString::fromUTF8("Ошибка"), Wt::WString::fromUTF8("Не выбран абонент"), Wt::Information, Wt::Yes | Wt::No);
+    			messageBox->buttonClicked().connect(std::bind([=] () {
+    			delete messageBox;
+    			}));
+
+    			messageBox->show();
+    		}
+
+
 }
 
 
@@ -5541,10 +5833,10 @@ extern void WtAccounts::create_new_call_tariff_dialog(std::string operation_name
 		    {
 		mysql_insert_create_call_tariff = "INSERT INTO account_database.call_tariff "
 					"(description, country, code, tariff, currency, "
-					"tariff_date, round, round_price, operator, plan, add_text,zone_description,TA_SumCheck) "
+					"tariff_date, round, round_price, operator, plan, add_text,zone_description) "
 					"values ('"+ description +"', '"+ country +"', '"+ country_code +"', "
 					"'"+ tariff +"', '"+ currency +"', '"+ tariff_date +"', '"+ rounding +"', "
-					"'"+ cost_rounding +"', '"+ operator_ +"', '"+ plan +"', '"+ add_text +"','"+ zone +"',MD5('"+ country_code +"'))";
+					"'"+ cost_rounding +"', '"+ operator_ +"', '"+ plan +"', '"+ add_text +"','"+ zone +"')";
 		    }
 
 		 if (operation_name == "Edit_text")
@@ -5810,15 +6102,33 @@ extern void WtAccounts::create_new_select_tariff_dialog_S(std::string operation_
 
 
 
-//abadon
+//abadon1
 // show dialog window where you manage call tariffs (create)
 extern void WtAccounts::manage_new_call_tariff_dialog()
 {
+Wt::WLineEdit *Tarif_search_edit;
+Wt::WPushButton *Tarif_search_button;
+
+
     Wt::WDialog *dialog = new Wt::WDialog(Wt::WString::fromUTF8("Тарифы на вызовы"));
 
-    dialog->resize(1150, 850);
+    dialog->resize(1550, 850);
 
 
+
+    Tarif_search_button = new Wt::WPushButton(dialog->footer());
+    Tarif_search_button->setId("user_search_button");
+    Tarif_search_button->setStyleClass(Wt::WString::fromUTF8("with-label btn btn-default btn btn-default with-label"));
+    Tarif_search_button->setInline(0);
+    Tarif_search_button->setEmptyText(Wt::WString::fromUTF8(""));
+    Tarif_search_button->setText(Wt::WString::fromUTF8("Поиск"));
+    Tarif_search_button->setLink(Wt::WLink(""));
+
+    Tarif_search_edit = new Wt::WLineEdit(dialog->footer());
+        //Tarif_search_edit->setId("Tarif_search_edit");
+       // Tarif_search_edit->setStyleClass(Wt::WString::fromUTF8("form-control form-control"));
+       // Tarif_search_edit->setInline(0);
+        Tarif_search_edit->setEmptyText(Wt::WString::fromUTF8(" "));
 
     // srevice top buttons
     Wt::WPushButton *save_exit_button = new Wt::WPushButton(Wt::WString::fromUTF8("Сохранить и закрыть"), dialog->contents());
@@ -5841,6 +6151,7 @@ extern void WtAccounts::manage_new_call_tariff_dialog()
 	edit_service_price_button->clicked().connect(boost::bind(&WtAccounts::create_new_select_tariff_dialog_S, this,"Edit_price" ));
 	edit_service_text_button->clicked().connect(boost::bind(&WtAccounts::create_new_select_tariff_dialog_S, this,"Edit_text"));
 
+
 	//delete_service_button->clicked().connect(boost::bind(&WtAccounts::delete_service_dialog, this, operation_name));
 
 
@@ -5859,7 +6170,7 @@ extern void WtAccounts::manage_new_call_tariff_dialog()
     //call_tariff_table_container->setStyleClass(Wt::WString::fromUTF8("col-md-9 col-lg-9 top_mar"));
     call_tariff_table_container->setHtmlTagName("div");
     call_tariff_table_container->setWidth(Wt::WLength("100%"));
-    call_tariff_table_container->setHeight(Wt::WLength("550px"));
+    call_tariff_table_container->setHeight(Wt::WLength("650px"));
     call_tariff_table_container->setOverflow(Wt::WContainerWidget::Overflow::OverflowAuto, Wt::Orientation::Vertical);
 
 	// table with data about ip address
@@ -5892,8 +6203,8 @@ extern void WtAccounts::manage_new_call_tariff_dialog()
 
 
 
-	std::string mysql_call_tariff_table_data = "SELECT * FROM call_tariff";
-
+	std::string mysql_call_tariff_table_data = "SELECT * FROM call_tariff order by rand() limit 100";
+    std::cout<<"SELECT"<<std::endl;
 	query_state=mysql_query(conn, mysql_call_tariff_table_data.c_str());
 	if(query_state!=0)
 	{
@@ -5919,7 +6230,7 @@ extern void WtAccounts::manage_new_call_tariff_dialog()
 	}
 	row_number = 0;
 	call_tariff_table->addStyleClass("table form-inline table-bordered table-hover table-condensed table-striped top_mar top_pad");
-
+	 std::cout<<"BUILD"<<std::endl;;
 
 	mysql_free_result(res);
 	mysql_close(conn);
@@ -5934,8 +6245,68 @@ extern void WtAccounts::manage_new_call_tariff_dialog()
     //ok->setDefault(true);
 
 
-    Wt::WPushButton *cancel = new Wt::WPushButton("Cancel", dialog->footer());
+    Wt::WPushButton *cancel = new Wt::WPushButton(Wt::WString::fromUTF8("Выход"), dialog->footer());
     dialog->rejectWhenEscapePressed();
+
+
+   //search
+    Tarif_search_button->clicked().connect(std::bind([=] () {
+    	call_tariff_table->clear();
+    	int row_number2 = 0;
+    	std::string mysql_search_call_tariff_table_data="";
+    	std::string tarif_search_text=Tarif_search_edit->text().toUTF8();
+    	mysql_init(&mysql);
+    	conn=mysql_real_connect(&mysql, server, user, password, database, 0, 0, 0);
+    	if(conn==NULL)
+    	{
+    		std::cout<<mysql_error(&mysql)<<std::endl<<std::endl;
+    	}
+    	mysql_query(&mysql,"SET NAMES 'UTF8'");
+
+
+
+
+   if (tarif_search_text=="")
+	   {
+	   mysql_search_call_tariff_table_data = "SELECT * FROM call_tariff order by rand() limit 100";
+
+	   } else {
+
+	    mysql_search_call_tariff_table_data = "SELECT * FROM account_database.call_tariff WHERE locate('"+ tarif_search_text +"', zone_description) "
+"OR  locate('"+ tarif_search_text +"', country) OR  locate('"+ tarif_search_text +"', description) OR  locate('"+ tarif_search_text +"', code) LIMIT 30";
+	   }
+
+
+
+   query_state=mysql_query(conn, mysql_search_call_tariff_table_data.c_str());
+
+   if(query_state!=0)
+   	   	{
+   	   	   std::cout<<mysql_error(conn)<<std::endl<<std::endl;
+   	   	}
+   	   	res=mysql_store_result(conn);
+   	   	while((row=mysql_fetch_row(res))!=NULL)
+   	   	{
+   	   		row_number2++;
+   	   		new Wt::WText(Wt::WString::fromUTF8(row[1]), call_tariff_table->elementAt(row_number2, 0));
+   	   		new Wt::WText(Wt::WString::fromUTF8(row[2]), call_tariff_table->elementAt(row_number2, 1));
+   	   		new Wt::WText(Wt::WString::fromUTF8(row[3]), call_tariff_table->elementAt(row_number2, 2));
+   	   		new Wt::WText(Wt::WString::fromUTF8(row[4]), call_tariff_table->elementAt(row_number2, 3));
+   	   		new Wt::WText(Wt::WString::fromUTF8(row[5]), call_tariff_table->elementAt(row_number2, 4));
+   	   		new Wt::WText(Wt::WString::fromUTF8(row[6]), call_tariff_table->elementAt(row_number2, 5));
+   	   		new Wt::WText(Wt::WString::fromUTF8(row[7]), call_tariff_table->elementAt(row_number2, 6));
+   	   		new Wt::WText(Wt::WString::fromUTF8(row[8]), call_tariff_table->elementAt(row_number2, 7));
+   	   		new Wt::WText(Wt::WString::fromUTF8(row[9]), call_tariff_table->elementAt(row_number2, 8));
+   	   		new Wt::WText(Wt::WString::fromUTF8(row[10]), call_tariff_table->elementAt(row_number2, 9));
+   	   		new Wt::WText(Wt::WString::fromUTF8(row[11]), call_tariff_table->elementAt(row_number2, 10));
+   	   		new Wt::WText(Wt::WString::fromUTF8(row[12]), call_tariff_table->elementAt(row_number2, 11));
+
+   	   	}
+   		mysql_free_result(res);
+   		mysql_close(conn);
+
+
+    }));
 
 
 
@@ -5959,6 +6330,7 @@ extern void WtAccounts::manage_new_call_tariff_dialog()
     }));
 
     dialog->show();
+    std::cout<<"END"<<std::endl;
 }
 
 //abadon
@@ -6120,7 +6492,7 @@ extern void WtAccounts::subscriber_fullName_changed() {
 
 		std::string mysql_total_credit_table_data = "SELECT subscriber_transaction.description, quantity, code "
 													"FROM subscriber_transaction, subscriber_services "
-													"WHERE subscriber_transaction.subscriber_id = '"+changedSubscriberName+"' "
+													"WHERE subscriber_transaction.subscriber_id = '"+subscriber_id_view_mode+"' "
 													"AND subscriber_transaction.description = subscriber_services.service_name "
 													"AND subscriber_transaction.transaction_type = 'Начисление' "
 													"AND MONTH(transaction_date) = '"+current_month+"' "
@@ -6135,7 +6507,7 @@ extern void WtAccounts::subscriber_fullName_changed() {
 
 		while((row=mysql_fetch_row(res))!=NULL)
 		{
-
+            //std::cout<<
 			row_number++;
 			new Wt::WText(Wt::WString::fromUTF8(row[0]), ui->total_month_credit_table->elementAt(row_number, 0));
 			new Wt::WText(Wt::WString::fromUTF8(row[2]), ui->total_month_credit_table->elementAt(row_number, 1));
@@ -6323,9 +6695,6 @@ extern void WtAccounts::subscriber_fullName_changed() {
 // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 
-
-
-
 // search subscribers by name, IP address, or phone number
 extern void WtAccounts::search_subscribers(std::string operation_name) {
 
@@ -6443,19 +6812,17 @@ extern void WtAccounts::search_subscribers(std::string operation_name) {
 	}
 }
 
+//End of Search
 
 
 
-
-// netflow and phone calls staistics
-extern void WtAccounts::p_account_operation_CHECK(std::string operation_name)
+extern void WtAccounts::p_account_operation_Data(std::string operation_name)
 {
 //get name of M that pressed
 std::string ResultOfoperationmeny="";
 ResultOfoperationmeny=ui->p_account_operation_split_button_popup->result()->text().toUTF8();
 
 //First check(if just table data) creat table 1st then perfom another function
-if (Wt::WString::fromUTF8("Телефонный трафик")==Wt::WString::fromUTF8(ResultOfoperationmeny) || Wt::WString::fromUTF8("Netflow трафик")==Wt::WString::fromUTF8(ResultOfoperationmeny)){
 
 	Wt::WMessageBox *messageBox;
 
@@ -6473,7 +6840,9 @@ if (Wt::WString::fromUTF8("Телефонный трафик")==Wt::WString::fro
 	Wt::WTreeNode *selected_node; // operator* returns contents of an interator
 	std::set<Wt::WTreeNode* > highlightedRows = ui->user_treeTable->tree()->selectedNodes();
 
-		if (!highlightedRows.empty())
+
+	//chek if any user selected
+	if (!highlightedRows.empty())
 					{
 
 			Wt::WContainerWidget * CHECK_pop_tab_Temp = new Wt::WContainerWidget(ui->container_cp);
@@ -6502,13 +6871,17 @@ if (Wt::WString::fromUTF8("Телефонный трафик")==Wt::WString::fro
 							     					}
 				                      changedSubscriberName = selected_node->label()->text().toUTF8();
 
+
+		  //for addition name in tab
 		std::string Obriv=" ";
 		 std::size_t pos_for_Obriv;
+		 /*
 		for(std::string::iterator it = changedSubscriberName.begin(); it != changedSubscriberName.end(); ++it) {
 
 
-		}
+		}*/
 
+		//for addition name in tab
 		pos_for_Obriv = changedSubscriberName.find(' ');
 		Obriv += changedSubscriberName.substr(0,pos_for_Obriv);
 		/*for (auto single_char:changedSubscriberName){
@@ -6526,14 +6899,15 @@ if (Wt::WString::fromUTF8("Телефонный трафик")==Wt::WString::fro
 
 					CHECK_user_treeTablef->setHeaderCount(1);
 
-					/*
-					//PDF
-						Wt::WResource *pdf = new ReportResource(CHECK_pop_tab_Temp);
 
-												Wt::WPushButton *button2 = new Wt::WPushButton("Create pdf",CHECK_pop_tab_Temp);
-												button2->setLink(pdf);
 					//PDF
- */
+				Wt::WResource *pdf = new ReportResource(service_table_container,0);
+
+										Wt::WPushButton *button2 = new Wt::WPushButton("Create pdf",CHECK_pop_tab_Temp);
+										//Wt::WPushButton *button3 = new Wt::WPushButton("wwwwwwwwwwww",ui->container_cp);
+										button2->setLink(pdf);
+					//PDF
+
 
 
 					if (Wt::WString::fromUTF8("Телефонный трафик")==Wt::WString::fromUTF8(ResultOfoperationmeny)){
@@ -6667,25 +7041,540 @@ mysql_query(&mysql,"SET NAMES 'UTF8'");
 			     				mysql_free_result(res);
 			     				mysql_close(conn);
 
+
+
+
+
+
+
+
+
+				}
+					}
+					else
+									{
+										messageBox = new Wt::WMessageBox(Wt::WString::fromUTF8("Ошибка"), Wt::WString::fromUTF8("Не выбран абонент"), Wt::Information, Wt::Yes | Wt::No);
+										messageBox->buttonClicked().connect(std::bind([=] () {
+										delete messageBox;
+										}));
+
+										messageBox->show();
+									}
+
+
 					}
 
 
-
-
-
-
-
-				} else
-				{
-					messageBox = new Wt::WMessageBox(Wt::WString::fromUTF8("Ошибка"), Wt::WString::fromUTF8("Не выбран абонент"), Wt::Information, Wt::Yes | Wt::No);
-					messageBox->buttonClicked().connect(std::bind([=] () {
-					delete messageBox;
-					}));
-
-					messageBox->show();
-				}}
 //end of func of showing data (netflow calls)
+
+extern void WtAccounts::Configure_edited_report_data_Report(std::string operation_name){
+
+
+	if (operation_name=="save"){
+
+		std::ifstream infile("cssQ.txt");
+		std::string out3;
+		std::stringstream buffer;
+
+		if ( infile )
+		{
+			buffer << infile.rdbuf();
+			infile.close();
+			out3=buffer.str();
+			// operations on the buffer...
+		}
+
+
+		//	auto itr_text_search;
+
+		std::ofstream out2("output.txt");
+
+std::string Report_edit_temp_string1= out3.substr(out3.find("<!--First_Text-->")+std::string("<!--First_Text-->").length(),out3.find("<!--End_F_Text-->")-(out3.find("<!--First_Text-->")+std::string("<!--First_Text-->").length()));
+
+std::string Report_edit_temp_string2= out3.substr(out3.find("<!--Second_text2-->")+std::string("<!--Second_text2-->").length(),out3.find("<!--End_S_Text2-->")-(out3.find("<!--Second_text2-->")+std::string("<!--Second_text2-->").length()));
+
+out2<<ui->user_text_area_report_edit_1->text().toUTF8();
+out2<<std::endl;
+out2<<ui->user_text_area_report_edit_2->text().toUTF8();
+		//std::ofstream onfile("cssQ.txt");
+
+out2<<std::endl;
+
+		size_t f = out3.find("<!--First_Text-->");
+		out3.replace(f+std::string("<!--First_Text-->").length(),Report_edit_temp_string1.length(), ui->user_text_area_report_edit_1->text().toUTF8());
+		out2<<f;
+
+		out2<<std::endl;
+		f =out3.find("<!--Second_text2-->");
+		out2<<f;
+		out3.replace(f+std::string("<!--Second_text2-->").length(),Report_edit_temp_string2.length(), ui->user_text_area_report_edit_2->text().toUTF8());
+		std::ofstream fout("cssQ.txt");
+		fout.write(out3.c_str(), out3.size());
+		fout.close();
+		out2.close();
+
+		//ui->create_user_tab_mi_report_edit->setHidden(false);
+		//ui->main_tabs->setCurrentIndex(3);
+
+		ui->create_user_tab_mi_report_edit->setHidden(true);
+		ui->main_tabs->setCurrentIndex(0);
+
+	}
+
+
 }
+
+
+//func to make creat report
+extern void WtAccounts::p_account_operation_create_Report(std::string operation_name)
+{
+
+	//if (operation_name=="fast") std::cout<<"whats wrong"<<std::endl;
+
+//
+int total_sum=0;
+	Wt::WMessageBox *messageBox;
+
+		//check year
+		std::string ResulYearCombo="";
+
+		ResulYearCombo=ui->year_combo_box->currentText().toUTF8();
+
+		//check month
+		int ResulMonthCombo_index;
+		ResulMonthCombo_index=ui->month_combo_box->currentIndex();ResulMonthCombo_index++;
+
+		std::string ResulMonthCombo_index_string=std::to_string(ResulMonthCombo_index);
+		std::string ResulMonthCombo_text_string=ui->month_combo_box->currentText().toUTF8();
+
+		std::string ResultOfoperationmeny="";
+
+		//if (operation_name=="fast") std::cout<<"whats wrong15"<<std::endl;
+
+		std::string changedSubscriberName = "";
+		Wt::WTreeNode *selected_node; // operator* returns contents of an interator
+		std::set<Wt::WTreeNode* > highlightedRows = ui->user_treeTable->tree()->selectedNodes();
+		//if (operation_name=="fast") std::cout<<"whats wrong21"<<std::endl;
+		if (!highlightedRows.empty())
+						{
+		//get name that selected
+		for (std::set<Wt::WTreeNode* >::iterator i = highlightedRows.begin(); i != highlightedRows.end(); ++i)
+									     					{
+									     					  selected_node = *i;
+									     					}
+			changedSubscriberName = selected_node->label()->text().toUTF8();
+			if (operation_name=="fast") std::cout<<"whats wrong22"<<std::endl;
+
+			//creat tab
+				Wt::WContainerWidget * CHECK_pop_tab_Temp = new Wt::WContainerWidget(ui->container_cp);
+			//	Wt::WMenuItem * CHECK_pop_tab_mi_temp = ui->main_tabs->addTab(CHECK_pop_tab_Temp, Wt::WString::fromUTF8(""));;
+			//	Wt::WTable *CHECK_user_treeTablef;
+			//	CHECK_pop_tab_mi_temp->setCloseable(true);
+			//	CHECK_pop_tab_mi_temp->enable();
+
+			// CHECK_pop_tab_mi_temp->setText(Wt::WString::fromUTF8(ResultOfoperationmeny));
+
+			//ui->main_tabs->setCurrentIndex(ui->main_tabs->indexOf(CHECK_pop_tab_Temp));
+
+			Wt::WContainerWidget *service_table_container = new Wt::WContainerWidget(CHECK_pop_tab_Temp);
+
+
+
+			////
+
+			//connect to data base
+			mysql_init(&mysql);
+			conn=mysql_real_connect(&mysql, server, user, password, database, 0, 0, 0);
+			mysql_query(&mysql,"SET NAMES 'UTF8'");
+
+			if(conn==NULL){
+			std::cout<<mysql_error(&mysql)<<std::endl<<std::endl;}
+
+
+
+			std::string mysql_Data_for_report = "SELECT * FROM  account_database.requisites WHERE subscriber_id IN "
+					"(SELECT subscriber_id FROM  account_database.subscriber WHERE full_name = '"+changedSubscriberName+"')";
+
+
+
+			query_state=mysql_query(conn, mysql_Data_for_report.c_str());
+			// set variables and form elements with data from mysql tables
+
+					if(query_state!=0)
+								   {
+								 std::cout<<mysql_error(conn)<<std::endl<<std::endl;
+								   }
+								   res=mysql_store_result(conn);
+								    std::cout<<"MySQL Values in the amaDB Table. Report"<<std::endl<<std::endl;
+								    std::string Presonal_code="";
+								    std::string agreement="";
+								    if((row=mysql_fetch_row(res))!=NULL) {
+
+
+						     				Presonal_code=row[2];
+						     				agreement=row[7];}
+
+
+
+
+
+
+			////
+			//Use difrent css
+		// Add an external style sheet to the application.
+		//Wt::WApplication::instance()->useStyleSheet("/resources/Report.css");
+		//Wt::WApplication::instance()->useStyleSheet("/resources/fgd.css");
+		// The style sheet should be applied to this container only.
+		// The class .CSS-example is used as selector.
+		//service_table_container->setStyleClass("CSS-example");
+
+			//Wt::WResource *pdf = new ReportResource(service_table_container,5);
+
+				std::ifstream infile("cssQ.txt");
+				std::string out3;
+				std::stringstream buffer;
+
+		if ( infile )
+		{
+			buffer << infile.rdbuf();
+			infile.close();
+			out3=buffer.str();
+			// operations on the buffer...
+		}
+
+
+          // infile.open
+		size_t f =out3.find("Name_w");
+		out3.replace(f,std::string("Name_w").length(), changedSubscriberName);
+	    f =out3.find("personal_code");
+		out3.replace(f,std::string("personal_code").length(), Presonal_code);
+
+		f =out3.find("req_code");
+		out3.replace(f,std::string("req_code").length(), agreement);
+	    f =out3.find("req_code");
+		out3.replace(f,std::string("req_code").length(), agreement);
+
+
+		f =out3.find("year_month");
+		if (ResulMonthCombo_index_string.length()<2) ResulMonthCombo_index_string.insert (0,"0");
+		out3.replace(f,std::string("year_month").length(), ResulYearCombo+ResulMonthCombo_index_string);
+
+		f =out3.find("Report_time1");
+		out3.replace(f,std::string("Report_time1").length(), ResulMonthCombo_index_string+"."+ResulYearCombo+"г");
+
+		f =out3.find("month_w");
+		out3.replace(f,std::string("month_w").length(), ResulMonthCombo_text_string);
+
+		f =out3.find("year_n");
+		out3.replace(f,std::string("year_n").length(), ResulYearCombo);
+
+
+		if (operation_name=="fast") std::cout<<"whats wrong3"<<std::endl;
+		//adress replace
+		mysql_free_result(res);
+		mysql_Data_for_report = "SELECT street FROM account_database.contacts WHERE subscriber_id "
+				"IN (SELECT subscriber_id FROM  account_database.subscriber WHERE full_name = '"+changedSubscriberName+"')";
+
+		query_state=mysql_query(conn, mysql_Data_for_report.c_str());
+
+		if(query_state!=0)
+					{
+					std::cout<<mysql_error(conn)<<std::endl<<std::endl;
+					}
+		res=mysql_store_result(conn);
+		if((row=mysql_fetch_row(res))!=NULL) {
+		std::string Adress_rep=row[0];
+		f =out3.find("Adress_");
+		out3.replace(f,std::string("Adress_").length(), Adress_rep);}
+
+///
+		//Phone number replace
+//		mysql_Data_for_report = "SELECT number FROM account_database.phone_numbers where subscriber_id='"+subscriber_id_view_mode+"'";
+//
+//				query_state=mysql_query(conn, mysql_Data_for_report.c_str());
+//
+//				if(query_state!=0)
+//							{
+//							std::cout<<mysql_error(conn)<<std::endl<<std::endl;
+//							}
+//				res=mysql_store_result(conn);
+//				std::string P_numb_rep="";
+//				if((row=mysql_fetch_row(res))!=NULL) {
+//				P_numb_rep=row[0];
+//				}
+//				f =out3.find("P_number");
+//				out3.replace(f,std::string("P_number").length(), P_numb_rep);
+//				mysql_free_result(res);
+//
+//		///
+
+		//code for adding service
+		        int numberforskip=280;//244 = FULL text size  between <!--ServiceStart--> to <!--ServiceEnd--> (WARRNING depends on size of html part where service add)
+				std::string Service = out3.substr(out3.find("<!--ServiceStart-->")+std::string("<!--ServiceStart-->").length(),numberforskip);
+
+
+				mysql_Data_for_report = "SELECT description,quantity FROM account_database.subscriber_transaction WHERE subscriber_id"
+						" IN  (SELECT subscriber_id FROM  account_database.subscriber WHERE full_name = '"+changedSubscriberName+"')"
+							"AND  month(transaction_date)=month(str_to_date('"+ResulMonthCombo_index_string+"','%m')) AND year(transaction_date)=year(str_to_date('"+ResulYearCombo+"','%Y'))";
+						    int row_number = 0;
+
+						    query_state=mysql_query(conn, mysql_Data_for_report.c_str());
+						    // set variables and form elements with data from mysql tables
+
+
+						    int NubrOffreetabs=122;//Value for blank space(to make both reports more semetric)
+						    if(query_state!=0)
+						    		{
+						    		std::cout<<mysql_error(conn)<<std::endl<<std::endl;
+						    		}
+
+						    res=mysql_store_result(conn);
+						    numberforskip=0;
+
+						    std::cout<<"MySQL Values in the amaDB Table. Report2"<<std::endl<<std::endl;
+
+						    if((row=mysql_fetch_row(res))!=NULL) {
+
+
+						   f = out3.find("ServiceName");
+						   out3.replace(f,std::string("ServiceName").length(), row[0]);
+
+						   f = out3.find("ServicePrice");
+						   out3.replace(f,std::string("ServicePrice").length(), row[1]);
+						   total_sum+=std::atoi(row[1]);
+
+						   std::cout<<"MySQL Values in the amaDB Table. "<<row[0]<<std::endl<<std::endl;
+
+
+						    //if more than 1
+							while((row=mysql_fetch_row(res))!=NULL)
+							{row_number++;
+							NubrOffreetabs-=34;//if we add service delete more blank space
+
+									     	std::string TempLength1=row[0];
+									     	std::string TempLength2=row[1];
+									     	total_sum+=std::atoi(row[1]);
+
+									     	TempLength1+=TempLength2;
+									     	std::string ServiceTemp=Service;
+
+									     	f =ServiceTemp.find("ServiceName");
+									     	ServiceTemp.replace(f,std::string("ServiceName").length(), row[0]);
+
+									     	f =ServiceTemp.find("ServicePrice");
+									     	ServiceTemp.replace(f,std::string("ServicePrice").length(), row[1]);
+
+							out3.insert(out3.find("<!--ServiceEnd-->")+std::string("<!--ServiceEnd-->").length()+numberforskip,ServiceTemp);
+							numberforskip+=256+TempLength1.length()+1;//220 is size of pure HTML wiout any text + text that we added to skip forvard
+									     				}
+
+
+
+
+									      mysql_free_result(res);
+										  mysql_close(conn);
+
+
+										  f = out3.find("Total_TO_PAY");
+										  out3.replace(f, std::string("Total_TO_PAY").length(),std::to_string(total_sum));
+
+										  f = out3.find("COL_2");
+										  out3.replace(f, std::string("COL_2").length(), std::to_string(total_sum));
+
+										  f = out3.find("COL_1");
+										  out3.replace(f, std::string("COL_1").length(), "0");
+										  f = out3.find("COL_3");
+										  out3.replace(f, std::string("COL_3").length(), "0");
+										  f = out3.find("COL_4");
+										  out3.replace(f, std::string("COL_4").length(), "0");
+
+						out3+="<div style=\"height: " +std::to_string(NubrOffreetabs)+" px;\">&nbsp;</div>";//add blank space befor next report
+
+
+
+				//find formated text of report copy at the end it
+ std::string Copytext = out3.substr(out3.find("<!--CopyStart-->")+std::string("<!--CopyStart-->").length(),out3.find("<!--CopyEnd-->")-(out3.find("<!--CopyStart-->")+std::string("<!--CopyStart-->").length()));
+
+		out3+=Copytext+"</div>";//close whole div
+
+//		//OUTput in file to test HTML
+//		std::ofstream out2("output.txt");
+//		out2 << out3;
+//		out2.close();
+
+
+             //creat pdf with contructor
+			 Wt::WResource *pdf = new ReportResource(service_table_container,changedSubscriberName,out3);
+           //  Wt::WPushButton *button2 = new Wt::WPushButton("Create pdf",service_table_container);
+
+
+			  //link to rendered  file
+		//	 button2->setLink(pdf);
+			 Wt::WApplication::redirect(pdf->url());//link to pdf to download
+			 if (operation_name=="fast") std::cout<<"whats wrong4"<<std::endl;
+
+				    }
+				    else {
+						messageBox = new Wt::WMessageBox(Wt::WString::fromUTF8("Ошибка"), Wt::WString::fromUTF8("Нет данных по этой дате"), Wt::Information, Wt::Yes | Wt::No);
+						messageBox->buttonClicked().connect(std::bind([=] () {
+						delete messageBox;
+						}));
+
+						messageBox->show();
+					}
+						}else
+						{
+							messageBox = new Wt::WMessageBox(Wt::WString::fromUTF8("Ошибка"), Wt::WString::fromUTF8("Не выбран абонент"), Wt::Information, Wt::Yes | Wt::No);
+							messageBox->buttonClicked().connect(std::bind([=] () {
+							delete messageBox;
+							}));
+
+							messageBox->show();
+						}
+
+
+}
+
+
+//func to make report
+extern void WtAccounts::p_account_operation_Report(std::string operation_name)
+{
+
+
+// show dialog window where you manage reports (create)
+
+
+
+	    Wt::WDialog *dialog = new Wt::WDialog(Wt::WString::fromUTF8("Отчеты"));
+
+	    dialog->resize(500, 300);
+
+Wt::WPushButton *save_exit_button = new Wt::WPushButton(Wt::WString::fromUTF8("Квитанция для физ."), dialog->contents());
+	        //save_exit_button->setStyleClass(Wt::WString::fromUTF8("btn btn-default with-label col-md-3 col-lg-3"));
+
+Wt::WPushButton *add_service_button = new Wt::WPushButton(Wt::WString::fromUTF8("Редактирование квитанции"), dialog->contents());
+	        //add_service_button->setStyleClass(Wt::WString::fromUTF8("btn btn-default with-label col-md-3 col-lg-3"));
+
+Wt::WPushButton *add2_service_button = new Wt::WPushButton(Wt::WString::fromUTF8("Расшифровка город и межгород"), dialog->contents());
+	              //  add_service_button->setStyleClass(Wt::WString::fromUTF8("btn btn-default with-label col-md-3 col-lg-3"));
+
+	                dialog->show();
+
+	                Wt::WPushButton *cancel = new Wt::WPushButton(Wt::WString::fromUTF8("Закрыть"), dialog->footer());
+	                    dialog->rejectWhenEscapePressed();
+
+
+	                    // Accept the dialog
+	                //    save_exit_button->setLink()
+	                    save_exit_button->clicked().connect(std::bind([=] () {
+	                      WtAccounts::p_account_operation_create_Report("edit");
+
+	                       dor=1;dialog->accept();delete dialog;
+	                    }));
+
+	                    add_service_button->clicked().connect(std::bind([=] () {
+	                    	 // WtAccounts::subscriber_show_operation_tab("view");
+
+//herdre
+	                    	ui->create_user_tab_mi_report_edit->setHidden(false);
+	                    	ui->main_tabs->setCurrentIndex(3);
+
+	                		std::ifstream infile("cssQ.txt");
+	                		std::string out3="";
+	                		std::stringstream buffer;
+
+	                		if ( infile )
+	                		{
+	                			buffer << infile.rdbuf();
+	                			infile.close();
+	                			out3=buffer.str();
+	                			// operations on the buffer...
+	                		}
+	                		std::string temp_text_report_edit1="";
+	                		std::string temp_text_report_edit2="";
+	                	//	auto itr_text_search;
+	                		auto temp_lenth=std::string("<!--First_Text-->").length();
+
+
+	                			//std::ofstream out2("output.txt");
+
+
+
+	                		//find find place of first keyword->copy from it and sub  its lenth.
+	                		//second arument is how much to copy  -> ( we find second keyword and sub from it  iterator place of  first  keywod to get length just text between
+	temp_text_report_edit1 = out3.substr(out3.find("<!--First_Text-->")+std::string("<!--First_Text-->").length(),out3.find("<!--End_F_Text-->")-(out3.find("<!--First_Text-->")+std::string("<!--First_Text-->").length()));
+
+  //  out2<<temp_text_report_edit1;
+	ui->user_text_area_report_edit_1->setText(Wt::WString::fromUTF8(temp_text_report_edit1));
+
+	temp_text_report_edit2 = out3.substr(out3.find("<!--Second_text2-->")+std::string("<!--Second_text2-->").length(),out3.find("<!--End_S_Text2-->")-(out3.find("<!--Second_text2-->")+std::string("<!--Second_text2-->").length()));
+	//out2<<temp_text_report_edit2;
+
+	ui->user_text_area_report_edit_2->setText(Wt::WString::fromUTF8(temp_text_report_edit2));
+
+	// out2.close();
+
+
+
+
+
+
+	                    	  dor=2;dialog->accept();delete dialog;
+                         }));
+
+	                    add2_service_button->clicked().connect(std::bind([=] () {
+	                    	WtAccounts::subscriber_show_operation_tab("create");    dor=3;dialog->accept();delete dialog;
+	                    }));
+
+	                    // Reject the dialog
+	                    cancel->clicked().connect(dialog, &Wt::WDialog::reject);
+
+
+	                    // Process the dialog result.
+	                    /*
+	                    dialog->finished().connect(std::bind([=] () {
+	                	if (dor==1)      {}
+	                	else if (dor==2) {}
+	                	else if (dor==3) {}
+	                	else if (dor==0) {}
+	                	dor==0;
+	                    }));*/
+
+}
+
+// function for operation on check
+extern void WtAccounts::p_account_operation_CHECK(std::string operation_name)
+{
+	Wt::WMessageBox *messageBox;
+
+//get name of Menu that pressed
+std::string ResultOfoperationmeny="";
+ResultOfoperationmeny=ui->p_account_operation_split_button_popup->result()->text().toUTF8();
+
+std::set<Wt::WTreeNode* > highlightedRows = ui->user_treeTable->tree()->selectedNodes();
+//if (!highlightedRows.empty()){}
+
+//Trafic and net flow depend on user that selected t we check if any user selected first inside func
+
+
+
+if (Wt::WString::fromUTF8("Телефонный трафик")==Wt::WString::fromUTF8(ResultOfoperationmeny) || Wt::WString::fromUTF8("Netflow трафик")==Wt::WString::fromUTF8(ResultOfoperationmeny)){
+	p_account_operation_Data("Телефонный трафик");
+}
+
+//Generate report ( check if user selected  inside func)
+if (Wt::WString::fromUTF8("Новый отчет")==Wt::WString::fromUTF8(ResultOfoperationmeny)){
+	WtAccounts::p_account_operation_create_Report("edit");}
+
+if (Wt::WString::fromUTF8("Создать отчет")==Wt::WString::fromUTF8(ResultOfoperationmeny)){
+				p_account_operation_Report("Новый отчет");}
+
+
+}
+
+
+
+///
 
 
 

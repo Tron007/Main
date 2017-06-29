@@ -42,8 +42,23 @@
 #include <Wt/WBootstrapTheme>
 
 //herdre
+#include <hpdf.h>
 #include <Wt/WSuggestionPopup>
 
+#include <Wt/WPushButton>
+#include <Wt/WResource>
+#include <Wt/Http/Request>
+#include <Wt/Http/Response>
+#include <Wt/Render/WPdfRenderer>
+#include <Wt/WApplication>
+#include <Wt/WPainter>
+
+#include <Wt/WVBoxLayout>
+#include <Wt/WGridLayout>
+
+#include <fstream>
+#include <string>
+#include <iostream>
 
 class Ui_WtAccounts
 {
@@ -323,6 +338,14 @@ public:
 	Wt::WTextArea *information_text_area_edit_user_tab;
 	Wt::WPopupMenu *p_account_operation_split_button_popup;
 
+
+
+	Wt::WMenuItem * create_user_tab_mi_report_edit; //for report
+	Wt::WTextArea *user_text_area_report_edit_1;//first area for report edit
+	Wt::WTextArea *user_text_area_report_edit_2;//second area for report edit
+
+	Wt::WPushButton *save_close_button_report_edit;//save and close button report
+
 	void setupUi(Wt::WContainerWidget *PageRoot)
 	{
 
@@ -593,21 +616,22 @@ public:
 							new_report_button->setId("new_report_button");
 							new_report_button->setStyleClass(Wt::WString::fromUTF8("with-label btn btn-default btn btn-default with-label"));
 							new_report_button->setInline(1);
-							new_report_button->setEmptyText(Wt::WString::fromUTF8(""));
+							//new_report_button->setEmptyText(Wt::WString::fromUTF8(""));
 							new_report_button->setText(Wt::WString::fromUTF8("Новый отчет"));
-							new_report_button->setLink(Wt::WLink(""));
+							//new_report_button->setLink(Wt::WLink(""));
 							account_operation_split_button = new Wt::WSplitButton(user_account_right_container);
 							account_operation_split_button->setId("account_operation_split_button");
 							account_operation_split_button->setStyleClass(Wt::WString::fromUTF8("btn-group"));
 							account_operation_split_button->setInline(0);
 							account_operation_split_button->actionButton()->setText(Wt::WString::fromUTF8("Операции по счету"));
 							p_account_operation_split_button_popup = new Wt::WPopupMenu();
-												p_account_operation_split_button_popup->addItem(Wt::WString::fromUTF8("Начислить услуги вручную"));
-												p_account_operation_split_button_popup->addItem(Wt::WString::fromUTF8("Ввести оплату"));
+							                    p_account_operation_split_button_popup->addItem(Wt::WString::fromUTF8("Ввести оплату"));
+							                    p_account_operation_split_button_popup->addItem(Wt::WString::fromUTF8("Новый отчет"));
 												p_account_operation_split_button_popup->addItem(Wt::WString::fromUTF8("Netflow трафик"));
 												p_account_operation_split_button_popup->addItem(Wt::WString::fromUTF8("Телефонный трафик"));
-												// p_account_operation_split_button_popup->addItem(Wt::WString::fromUTF8("Создать отчет"));
-												// p_account_operation_split_button_popup->addItem(Wt::WString::fromUTF8("Сгенерировать квитанцию"));
+												p_account_operation_split_button_popup->addItem(Wt::WString::fromUTF8("Создать отчет"));
+												//p_account_operation_split_button_popup->addItem(Wt::WString::fromUTF8("Сгенерировать квитанцию"));
+												p_account_operation_split_button_popup->addItem(Wt::WString::fromUTF8("Начислить услуги вручную"));
 												account_operation_split_button->dropDownButton()->setMenu(p_account_operation_split_button_popup);
 							lock_button = new Wt::WPushButton(user_account_right_container);
 							lock_button->setId("lock_button");
@@ -1979,6 +2003,97 @@ public:
 							information_text_area_edit_user_tab->setRows(8);
 						}
 					}
+
+					/////////// Form for edit report(herdre)
+										Wt::WContainerWidget * create_user_tab_report_edit;
+										create_user_tab_report_edit = new Wt::WContainerWidget(container_cp);
+										create_user_tab_mi_report_edit = main_tabs->addTab(create_user_tab_report_edit, Wt::WString::fromUTF8("Редактирование отчета"));
+										create_user_tab_report_edit->setId("create_user_tab_report_edit");
+										create_user_tab_report_edit->setStyleClass(Wt::WString::fromUTF8(""));
+										create_user_tab_report_edit->setInline(0);
+										main_tabs->setTabEnabled(3, 1);
+										main_tabs->setTabHidden(3, 1);
+										main_tabs->setTabCloseable(3, 1);
+
+										{
+											Wt::WContainerWidget *create_user_tab_top_button_container_report_edit = new Wt::WContainerWidget(create_user_tab_report_edit);
+											create_user_tab_top_button_container_report_edit->setId("create_user_tab_top_button_container_report_edit");
+											create_user_tab_top_button_container_report_edit->setStyleClass(Wt::WString::fromUTF8(""));
+											create_user_tab_top_button_container_report_edit->setInline(0);
+											create_user_tab_top_button_container_report_edit->setHtmlTagName("div");
+											{
+												save_close_button_report_edit = new Wt::WPushButton(create_user_tab_top_button_container_report_edit);
+												save_close_button_report_edit->setId("save_close_button_report_edit");
+												save_close_button_report_edit->setStyleClass(Wt::WString::fromUTF8("btn btn-default with-label"));
+												save_close_button_report_edit->setInline(1);
+												save_close_button_report_edit->setEmptyText(Wt::WString::fromUTF8(""));
+												save_close_button_report_edit->setText(Wt::WString::fromUTF8("Сохранить и закрыть"));
+												save_close_button_report_edit->setLink(Wt::WLink(""));
+
+											}
+											Wt::WContainerWidget *create_user_tab_left_container_report_edit = new Wt::WContainerWidget(create_user_tab_report_edit);
+											create_user_tab_left_container_report_edit->setId("create_user_tab_left_container_report_edit");
+											create_user_tab_left_container_report_edit->setStyleClass(Wt::WString::fromUTF8("col-md-7 col-lg-7"));
+											create_user_tab_left_container_report_edit->setInline(0);
+											create_user_tab_left_container_report_edit->setHtmlTagName("div");
+											{
+												Wt::WText *user_address_text_report1 = new Wt::WText(create_user_tab_left_container_report_edit);
+												user_address_text_report1->setId("user_address_text_report1");
+												user_address_text_report1->setStyleClass(Wt::WString::fromUTF8("col-lg-3 col-md-3"));
+												user_address_text_report1->setInline(0);
+												user_address_text_report1->setTextFormat((Wt::TextFormat)0);
+												user_address_text_report1->setText(Wt::WString::fromUTF8("Описание:"));
+												Wt::WContainerWidget *user_address_text_area_container_report1 = new Wt::WContainerWidget(create_user_tab_left_container_report_edit);
+												user_address_text_area_container_report1->setId("user_address_text_area_container_report1");
+												user_address_text_area_container_report1->setStyleClass(Wt::WString::fromUTF8("col-md-8 col-lg-8"));
+												user_address_text_area_container_report1->setInline(0);
+												user_address_text_area_container_report1->setHtmlTagName("div");
+												{
+													user_text_area_report_edit_1 = new Wt::WTextArea(user_address_text_area_container_report1);
+													user_text_area_report_edit_1->setId("user_text_area_report_edit_1");
+													user_text_area_report_edit_1->setStyleClass(Wt::WString::fromUTF8("form-control form-control"));
+													user_text_area_report_edit_1->setInline(0);
+													user_text_area_report_edit_1->setEmptyText(Wt::WString::fromUTF8(""));
+													user_text_area_report_edit_1->setText(Wt::WString::fromUTF8(" "));
+													user_text_area_report_edit_1->setColumns(20);
+													user_text_area_report_edit_1->setRows(8);
+												}
+												{
+													Wt::WText *user_address_text_report2 = new Wt::WText(create_user_tab_left_container_report_edit);
+													user_address_text_report2->setId("user_address_text_report2");
+													user_address_text_report2->setStyleClass(Wt::WString::fromUTF8("col-lg-3 col-md-3"));
+													user_address_text_report2->setInline(0);
+													user_address_text_report2->setTextFormat((Wt::TextFormat)0);
+													user_address_text_report2->setText(Wt::WString::fromUTF8("Реквезиты:"));
+													Wt::WContainerWidget *user_address_text_area_container_report2 = new Wt::WContainerWidget(create_user_tab_left_container_report_edit);
+													user_address_text_area_container_report2->setId("user_address_text_area_container_report2");
+													user_address_text_area_container_report2->setStyleClass(Wt::WString::fromUTF8("col-md-8 col-lg-8"));
+													user_address_text_area_container_report2->setInline(0);
+													user_address_text_area_container_report2->setHtmlTagName("div");
+													{
+														user_text_area_report_edit_2 = new Wt::WTextArea(user_address_text_area_container_report2);
+														user_text_area_report_edit_2->setId("user_text_area_report_edit_2");
+														user_text_area_report_edit_2->setStyleClass(Wt::WString::fromUTF8("form-control form-control"));
+														user_text_area_report_edit_2->setInline(0);
+														user_text_area_report_edit_2->setEmptyText(Wt::WString::fromUTF8(""));
+														user_text_area_report_edit_2->setText(Wt::WString::fromUTF8(" "));
+														user_text_area_report_edit_2->setColumns(20);
+														user_text_area_report_edit_2->setRows(8);
+													}
+												}
+
+
+											}
+											Wt::WText *user_address_text_report3 = new Wt::WText(create_user_tab_report_edit);
+											user_address_text_report3->setId("user_address_text_report3");
+											user_address_text_report3->setStyleClass(Wt::WString::fromUTF8("col-md-6 .col-md-offset-3"));
+											user_address_text_report3->setInline(0);
+											user_address_text_report3->setTextFormat((Wt::TextFormat)0);
+											user_address_text_report3->setText(Wt::WString::fromUTF8("Не рекомендуеться редактировать формирование отчета из нескольких окон одновременно"));
+										}
+
+										////////////end of reprt form
+
 				}
 			}
 		}

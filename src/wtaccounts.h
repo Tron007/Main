@@ -62,8 +62,17 @@ public:
 
 	// herdre functions
 	// *************************************************************************
-	void search_subscribers(std::string operation_name);
 	void p_account_operation_CHECK(std::string operation_name);
+	//data
+	void p_account_operation_Data(std::string operation_name);
+	//report
+	void p_account_operation_Report(std::string operation_name);
+	void p_account_operation_create_Report(std::string operation_name);
+	void Configure_edited_report_data_Report(std::string operation_name);
+	//Serarch
+	void search_subscribers(std::string operation_name);
+
+
 
 private:
 	Ui_WtAccounts *ui;
