@@ -103,7 +103,7 @@ MYSQL_RES *add_res;
 MYSQL_ROW add_row;
 
 
-//// mysql connections settings
+// mysql connections settings
 const char *server="52.8.83.48";
 const char *user="007";
 const char *password="Yeshimbetov^Karakalpak8";
@@ -113,7 +113,7 @@ std::string mysql_query_str = "";
 
 
 
-////// mysql connections settings
+//////// mysql connections settings
 //const char *server="localhost";
 //const char *user="root";
 //const char *password="admin";
@@ -554,13 +554,15 @@ public:
 	 std::string nate2;
 	 std::string nate3;
 	 int number;
+	 int state;
 
   ReportResource(Wt::WContainerWidget* target, Wt::WObject* parent = 0)
     : Wt::WResource(parent),
     _target(NULL)
-  {
+  { state=1;
     suggestFileName("report.pdf");
     _target = target;
+
   }
 
 
@@ -584,6 +586,7 @@ public:
 
         suggestFileName(Wt::WString::fromUTF8(Obriv)+".pdf");
         _target = target;
+        state=2;
       }
 
 /*
@@ -629,19 +632,20 @@ private:
 
   void renderReport(HPDF_Doc pdf)
   {
+
+	if (state==1)  {
     std::stringstream ss;
-
-
     _target->htmlText(ss);
     std::string out = ss.str();
     std::string out_id = _target->id();
     std::string out_parent_id = _target->parent()->id();
 
-    std::string STRING;
-
-
-		//ss.str()
+    //std::string STRING;
+	 renderPdf(Wt::WString::fromUTF8(ss.str()), pdf);}
+	else
   renderPdf(Wt::WString::fromUTF8(nate2), pdf);
+
+
 
   }
 
@@ -649,23 +653,29 @@ private:
   {
 
     HPDF_Page page = HPDF_AddPage(pdf);
-    HPDF_Page_SetSize(page, HPDF_PAGE_SIZE_A4, HPDF_PAGE_PORTRAIT);
-   //HPDF_Page_SetSize(page, HPDF_PAGE_SIZE_A4, HPDF_PAGE_LANDSCAPE);
+
+     if (state==2 )HPDF_Page_SetSize(page, HPDF_PAGE_SIZE_A4, HPDF_PAGE_PORTRAIT);
+     else
+     HPDF_Page_SetSize(page, HPDF_PAGE_SIZE_A4, HPDF_PAGE_LANDSCAPE);
+
     int d;
     Wt::Render::WPdfRenderer renderer(pdf, page);
   // renderer.useStyleSheet("/resources/fgd.css");
 
-    const char *fontname;
-    HPDF_Font font;
+//    const char *fontname;
+//    HPDF_Font font;
 
  //   fontname = HPDF_LoadTTFontFromFile(pdf, "FreeSans.ttf", HPDF_TRUE);
  //   font = HPDF_GetFont(pdf, fontname, "UTF-8");
    // HPDF_Page_SetFontAndSize(page, font, 8);
 
+
     //renderer.st
-   //renderer.setMargin(0);
- // renderer.setDpi(110);
-   renderer.render(html);
+
+    if (state==1){
+  renderer.setMargin(0);
+  renderer.setDpi(110);}
+  renderer.render(html);
   }
 };
 
@@ -6919,10 +6929,10 @@ ResultOfoperationmeny=ui->p_account_operation_split_button_popup->result()->text
 
 					//PDF
 				Wt::WResource *pdf = new ReportResource(service_table_container,0);
-
-										Wt::WPushButton *button2 = new Wt::WPushButton("Create pdf",CHECK_pop_tab_Temp);
-										//Wt::WPushButton *button3 = new Wt::WPushButton("wwwwwwwwwwww",ui->container_cp);
-										button2->setLink(pdf);
+				//service_table_container
+				Wt::WPushButton *button2 = new Wt::WPushButton(Wt::WString::fromUTF8("Создать Отчет"),CHECK_pop_tab_Temp);
+//CHECK_pop_tab_Temp
+				button2->setLink(pdf);
 					//PDF
 
 
@@ -7455,6 +7465,7 @@ int total_sum=0;
 										  f = out3.find("Total_TO_PAY");
 										  out3.replace(f, std::string("Total_TO_PAY").length(),std::to_string(total_sum));
 
+
 										  f = out3.find("COL_2");
 										  out3.replace(f, std::string("COL_2").length(), std::to_string(total_sum));
 
@@ -7469,6 +7480,12 @@ int total_sum=0;
 										  f = out3.find("COL_5");
 										  if (debt_cost<0) debt_cost=0;
 										  out3.replace(f, std::string("COL_5").length(), std::to_string(debt_cost));
+
+										  f = out3.find("TT_P");
+										  out3.replace(f, std::string("TT_P").length(),std::to_string(debt_cost));
+										  f = out3.find("TT_P");
+										  out3.replace(f, std::string("TT_P").length(),std::to_string(debt_cost));
+
 
 
 
@@ -7497,7 +7514,7 @@ int total_sum=0;
 			  //link to rendered  file
 		//	 button2->setLink(pdf);
 			 Wt::WApplication::redirect(pdf->url());//link to pdf to download
-			 if (operation_name=="fast") std::cout<<"whats wrong4"<<std::endl;
+
 
 				    }
 				    else {
