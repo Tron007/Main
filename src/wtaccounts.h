@@ -67,6 +67,7 @@ public:
 	void p_account_operation_Data(std::string operation_name);
 	//report
 	void p_account_operation_Report(std::string operation_name);
+	void p_account_outside_call_create_Report_(std::string operation_name);
 	void p_account_operation_create_Report(std::string operation_name);
 	void Configure_edited_report_data_Report(std::string operation_name);
 	//Serarch
