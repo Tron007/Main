@@ -6739,7 +6739,45 @@ extern void WtAccounts::subscriber_fullName_changed() {
 //				"AND MONTH(a.start_date)='"+current_month+"' AND YEAR(a.start_date)='"+current_year+"' AND (c.number=a.numberA OR c.number=a.numberB) "
 //				"GROUP BY  c.number) N ON N.number = ama_data.numberA OR N.number = ama_data.numberB Group by N.number,call_type;";
 
-		std::string mysql_traffic_and_calls_table_data = "SELECT  call_type,COUNT(*),SUM(call_cost), N.number,SUM(milli_second)"
+		std::string mysql_traffic_and_calls_table_data = "SELECT ip_address FROM account_database.ip_addresses WHERE subscriber_id='"+subscriber_id_view_mode+"'";
+
+		row_number = 0;
+
+		query_state=mysql_query(conn, mysql_traffic_and_calls_table_data.c_str());
+		if(query_state!=0)
+		{
+			std::cout<<mysql_error(conn)<<std::endl<<std::endl;
+		}
+		res=mysql_store_result(conn);
+		//if subscriber have IP
+		if ((row=mysql_fetch_row(res))!=NULL){
+			std::string Cur_user_IP=row[0];
+			mysql_traffic_and_calls_table_data = "SELECT sum(total_bytes),count(total_bytes) FROM account_database.netflow_data "
+					"WHERE source_address='"+Cur_user_IP+"' AND MONTH(receive_date) = '"+current_month+"' AND YEAR(receive_date)='"+current_year+"'";
+
+			row_number = 0;
+
+			query_state=mysql_query(conn, mysql_traffic_and_calls_table_data.c_str());
+			if(query_state!=0)
+			{
+				std::cout<<mysql_error(conn)<<std::endl<<std::endl;
+			}
+			res=mysql_store_result(conn);
+			if ((row=mysql_fetch_row(res))!=NULL){
+				if(row[0]!=NULL){//check again b/c of sum(total_bytes)
+					row_number++;
+					new Wt::WText(Wt::WString::fromUTF8("Учет Трафика"), ui->traffic_call_table->elementAt(row_number, 0));
+					new Wt::WText(Wt::WString::fromUTF8("-"), ui->traffic_call_table->elementAt(row_number, 1));
+					new Wt::WText(Wt::WString::fromUTF8(row[1]), ui->traffic_call_table->elementAt(row_number, 2));
+					new Wt::WText(Wt::WString::fromUTF8("0"), ui->traffic_call_table->elementAt(row_number, 3));
+					new Wt::WText(Wt::WString::fromUTF8(Cur_user_IP), ui->traffic_call_table->elementAt(row_number, 4));
+					int row4=std::atoi(row[0])/125000;
+					new Wt::WText(Wt::WString::fromUTF8(std::to_string(row4)+" MB"), ui->traffic_call_table->elementAt(row_number, 5));
+
+				}}}
+
+
+		mysql_traffic_and_calls_table_data = "SELECT  call_type,COUNT(*),SUM(call_cost), N.number,SUM(milli_second)"
 				" FROM account_database.ama_data INNER JOIN "
 				"(SELECT number FROM  account_database.phone_numbers  WHERE subscriber_id ='"+subscriber_id_view_mode+"')N "
 				" ON N.number = ama_data.numberA OR N.number = ama_data.numberB  "
@@ -6749,7 +6787,6 @@ extern void WtAccounts::subscriber_fullName_changed() {
 
 
 
-		row_number = 0;
 
 		query_state=mysql_query(conn, mysql_traffic_and_calls_table_data.c_str());
 		if(query_state!=0)
@@ -6774,9 +6811,7 @@ extern void WtAccounts::subscriber_fullName_changed() {
 
 
 
-
 		ui->traffic_call_table->addStyleClass("table form-inline table-bordered table-hover table-condensed table-striped");
-
 
 
 		mysql_free_result(res);
