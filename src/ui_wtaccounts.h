@@ -454,14 +454,14 @@ public:
 					nv_pp_menu->setStyleClass(Wt::WString::fromUTF8("Wt-popup dropdown-menu"));
 					nv_pp_menu_rightmenu->setInline(0);
 					{
-						nv_pp_item1 = nv_pp_menu->addItem(Wt::WString::fromUTF8("Счета абонентов (Просмотр)"));
-						nv_pp_item1->setId("nv_pp_item1");
-						nv_pp_item1->setStyleClass(Wt::WString::fromUTF8(""));
-						nv_pp_item1->setInline(0);
-						nv_pp_item1->setIcon("");
-						nv_pp_item1->setCheckable(0);
-						nv_pp_item1->setChecked(0);
-						nv_pp_item1->setCloseable(0);
+//						nv_pp_item1 = nv_pp_menu->addItem(Wt::WString::fromUTF8("Счета абонентов (Просмотр)"));
+//						nv_pp_item1->setId("nv_pp_item1");
+//						nv_pp_item1->setStyleClass(Wt::WString::fromUTF8(""));
+//						nv_pp_item1->setInline(0);
+//						nv_pp_item1->setIcon("");
+//						nv_pp_item1->setCheckable(0);
+//						nv_pp_item1->setChecked(0);
+//						nv_pp_item1->setCloseable(0);
 						nv_pp_item2 = nv_pp_menu->addItem(Wt::WString::fromUTF8("Содание нового абонента"));
 						nv_pp_item2->setId("nv_pp_item2");
 						nv_pp_item2->setStyleClass(Wt::WString::fromUTF8(""));

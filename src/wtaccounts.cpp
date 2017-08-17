@@ -63,7 +63,7 @@ WtAccounts::WtAccounts(const Wt::WEnvironment& env) : Wt::WApplication(env), ui(
 
 	ui->p_account_operation_split_button_popup->itemSelected().connect(boost::bind(&WtAccounts::account_operation_popup_item_binder, this));
 
-	ui->nv_pp_item1->clicked().connect(boost::bind(&WtAccounts::subscriber_show_operation_tab, this, "view"));
+	//ui->nv_pp_item1->clicked().connect(boost::bind(&WtAccounts::subscriber_show_operation_tab, this, "view"));
 	ui->nv_pp_item2->clicked().connect(boost::bind(&WtAccounts::subscriber_show_operation_tab, this, "create"));
 	ui->nv_pp_item3->clicked().connect(boost::bind(&WtAccounts::subscriber_show_operation_tab, this, "edit"));
 	ui->nv_pp_item4->clicked().connect(boost::bind(&WtAccounts::manage_services_dialog, this));
@@ -635,15 +635,26 @@ private:
 
 	if (state==1)  {
     std::stringstream ss;
-
+//develop 007
     ss<<css;
+
+
     _target->htmlText(ss);
+  //  size_t f =ss.str().find("height");
+   // ss.str().erase (f,std::string("height:800.0px;").length());
+   // std::cout<<f<<"FOUND  _target->htmlText(ss);"<<std::endl;
     std::string out = ss.str();
     std::string out_id = _target->id();
     std::string out_parent_id = _target->parent()->id();
 
-    //std::string STRING;
-	 renderPdf(Wt::WString::fromUTF8(ss.str()), pdf);}
+    size_t f =out.find("height");
+    out.erase (f,std::string("height:800.0px;").length());
+
+    std::ofstream out2("output.txt");
+     out2 << out;
+     out2.close();
+    //std::string STRING;  //ss.str()
+	 renderPdf(Wt::WString::fromUTF8(out), pdf);}
 	else
   renderPdf(Wt::WString::fromUTF8(nate2), pdf);
 
@@ -663,9 +674,9 @@ private:
     int d;
     Wt::Render::WPdfRenderer renderer(pdf, page);
 
-    if (state==1)renderer.useStyleSheet("/resources/Render.css");
+  //  if (state==1)renderer.useStyleSheet("/resources/Render.css");
    // if (state==1)renderer.useStyleSheet("Render.css");
-   renderer.setStyleSheetText(css);
+   //renderer.setStyleSheetText(css);
 
 //    const char *fontname;
 //    HPDF_Font font;
@@ -675,17 +686,22 @@ private:
    // HPDF_Page_SetFontAndSize(page, font, 8);
 
 
-    					//OUTput in file to test HTML
-    					std::ofstream out2("output.txt");
-    					out2 << renderer.styleSheetText();
-    					out2.close();
+
 
     //renderer.st
 
     if (state==1){
   renderer.setMargin(0);
-  renderer.setDpi(110);}
+  renderer.setDpi(110);
+    }
   renderer.render(html);
+  //HPDF_Page_EndText (page);
+  //OUTput in file to test HTML
+
+  //renderer.render(html);
+  //HPDF_Page_BeginText (page);
+  //HPDF_Page_MoveTextPos (page, 10, 10);
+
   }
 };
 
@@ -5615,7 +5631,7 @@ extern void WtAccounts::create_new_call_tariff_dialog(std::string operation_name
 
 
     plan_edit = new Wt::WLineEdit(plan_edit_container);
-   plan_edit->setText(Wt::WString::fromUTF8("физ. лица"));
+   plan_edit->setText(Wt::WString::fromUTF8("физ.лица"));
   ///plan_edit->setText(Wt::WString::fromUTF8(FAKE));
     plan_label->setBuddy(plan_edit);
 
@@ -6030,7 +6046,7 @@ extern void WtAccounts::create_new_select_tariff_dialog_S(std::string operation_
 	    //treeTable->addColumn(Wt::WString::fromUTF8("Фикс. сумма"), 100);
 
 	    Wt::WTreeTableNode *tree_root;
-//007 edit
+
 		tree_root = new Wt::WTreeTableNode(Wt::WString::fromUTF8(temp2_text));
 	    treeTable->setTreeRoot(tree_root, Wt::WString::fromUTF8(temp3_text));
 
@@ -6771,7 +6787,7 @@ extern void WtAccounts::subscriber_fullName_changed() {
 					new Wt::WText(Wt::WString::fromUTF8(row[1]), ui->traffic_call_table->elementAt(row_number, 2));
 					new Wt::WText(Wt::WString::fromUTF8("0"), ui->traffic_call_table->elementAt(row_number, 3));
 					new Wt::WText(Wt::WString::fromUTF8(Cur_user_IP), ui->traffic_call_table->elementAt(row_number, 4));
-					int row4=std::atoi(row[0])/125000;
+					long long int row4=std::atoll(row[0])/125000;
 					new Wt::WText(Wt::WString::fromUTF8(std::to_string(row4)+" MB"), ui->traffic_call_table->elementAt(row_number, 5));
 
 				}}}
@@ -7085,7 +7101,7 @@ mysql_query(&mysql,"SET NAMES 'UTF8'");
 			     		std::cout<<mysql_error(&mysql)<<std::endl<<std::endl;}
 
 
-			     	std::string mysql_subscriber_all_table_data = "SELECT c.*,full_name FROM account_database.subscriber "
+			     	std::string mysql_subscriber_all_table_data = "SELECT c.* FROM account_database.subscriber "
 			     			" AS a INNER JOIN account_database.phone_numbers AS b INNER JOIN account_database.ama_data AS "
 			     			"c ON a.subscriber_id=b.subscriber_id WHERE full_name='"+changedSubscriberName+"' "
 			     					"AND (b.number=c.numberB OR b.number=c.numberA) "
@@ -7102,9 +7118,13 @@ mysql_query(&mysql,"SET NAMES 'UTF8'");
 			     				while((row=mysql_fetch_row(res))!=NULL)
 			     				{row_number++;
 
-			     				if (Wt::WString::fromUTF8(row[11])=="common") TypeOfcall="Городской";
-			     				if (Wt::WString::fromUTF8(row[11])=="outgoing mobile") TypeOfcall="Входяший";
-			     				if (Wt::WString::fromUTF8(row[11])=="international") TypeOfcall="Междугородный";
+
+
+
+
+			     				if (Wt::WString::fromUTF8(row[10])=="common") TypeOfcall="Городской";
+			     				if (Wt::WString::fromUTF8(row[10])=="outgoing mobile") TypeOfcall="Входяший";
+			     				if (Wt::WString::fromUTF8(row[10])=="international") TypeOfcall="Междугородный";
 
 			     				new Wt::WText(Wt::WString::fromUTF8("Учет телефонных звонков"), CHECK_user_treeTablef->elementAt(row_number, 0));
 			     				new Wt::WText(Wt::WString::fromUTF8("Обычный"), CHECK_user_treeTablef->elementAt(row_number, 1));
@@ -7114,6 +7134,15 @@ mysql_query(&mysql,"SET NAMES 'UTF8'");
 			     				new Wt::WText(Wt::WString::fromUTF8(row[4]), CHECK_user_treeTablef->elementAt(row_number, 6));
 			     				new Wt::WText(Wt::WString::fromUTF8(changedSubscriberName), CHECK_user_treeTablef->elementAt(row_number, 8));
 			     				new Wt::WText(Wt::WString::fromUTF8(TypeOfcall), CHECK_user_treeTablef->elementAt(row_number, 2));
+                                double durtaion_call = boost::lexical_cast<double>(row[7])/1000;
+
+                                durtaion_call = (int)(durtaion_call / 0.01) * 0.01;
+
+
+                                std::string durtaion_call_string=std::to_string(durtaion_call);
+                                new Wt::WText(Wt::WString::fromUTF8(durtaion_call_string), CHECK_user_treeTablef->elementAt(row_number, 12));
+			     				new Wt::WText(Wt::WString::fromUTF8(row[10]), CHECK_user_treeTablef->elementAt(row_number, 13));
+
 			     				}
 			     				CHECK_user_treeTablef->refresh();
 			     				mysql_free_result(res);
@@ -7665,7 +7694,7 @@ extern void WtAccounts::p_account_outside_call_create_Report_(std::string operat
 
 	//
 	int total_sum=0;
-	int total_talk=0;
+	double total_talk=0;
 		Wt::WMessageBox *messageBox;
 
 			//check year
@@ -7836,7 +7865,7 @@ extern void WtAccounts::p_account_outside_call_create_Report_(std::string operat
 
 							f = out3.find("Row5");
 							out3.replace(f,std::string("Row5").length(), row[3]);
-							total_talk+=std::atoi(row[3]);
+							total_talk+=std::atof(row[3]);
 
 							f = out3.find("Row6");
 							out3.replace(f,std::string("Row6").length(), row[4]);
@@ -7857,7 +7886,7 @@ extern void WtAccounts::p_account_outside_call_create_Report_(std::string operat
 							std::string TempLength3=row[2];
 							std::string TempLength4=row[3];
 							std::string TempLength5=row[4];
-							total_talk+=std::atoi(row[3]);
+							total_talk+=std::atof(row[3]);
 
 							TempLength1+=TempLength2+TempLength3+TempLength4;
 							std::string ServiceTemp=Service;
@@ -7885,7 +7914,10 @@ extern void WtAccounts::p_account_outside_call_create_Report_(std::string operat
 							}
 							mysql_free_result(res);
 							f =out3.find("Total_C2");
-							out3.replace(f,std::string("Total_C2").length(), std::to_string(total_talk));
+							double integral;
+							double fractional = std::modf(total_talk, &integral);
+							if (fractional>0) total_talk=integral+1;
+							out3.replace(f,std::string("Total_C2").length(), std::to_string(int(total_talk)));
 							f =out3.find("Total_P2");
 							out3.replace(f,std::string("Total_P2").length(), "0");
 
