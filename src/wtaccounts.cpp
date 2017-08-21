@@ -35,10 +35,13 @@ WtAccounts::WtAccounts(const Wt::WEnvironment& env) : Wt::WApplication(env), ui(
 	//ui->user_number_button->clicked().connect(boost::bind(&WtAccounts::subscriber_phone_number_dialog, this));
 	//ui->nv_menu_item2_mi->clicked().connect(boost::bind(&WtAccounts::edit_subscriber_load_data, this)); // ***
 	//ui->save_close_button->clicked().connect(boost::bind(&WtAccounts::create_user_tab_save_data, this));
-	ui->main_tabs->setCurrentIndex(0);
+	// ui->main_tabs->setCurrentIndex(0);
 	//WtAccounts::data_load_user_account_tab();
-	WtAccounts::subscriber_show_operation_tab("view");
+	// WtAccounts::subscriber_show_operation_tab("view");
 
+
+	 ui->welcome_user_tab_mi->setHidden(false);
+	 ui->main_tabs->setCurrentIndex(4);
 
 	// new regrouping functions
 	//ui->nv_menu_item1_mi->clicked().connect(boost::bind(&WtAccounts::subscriber_show_operation_tab, this, "create"));
@@ -63,7 +66,7 @@ WtAccounts::WtAccounts(const Wt::WEnvironment& env) : Wt::WApplication(env), ui(
 
 	ui->p_account_operation_split_button_popup->itemSelected().connect(boost::bind(&WtAccounts::account_operation_popup_item_binder, this));
 
-	//ui->nv_pp_item1->clicked().connect(boost::bind(&WtAccounts::subscriber_show_operation_tab, this, "view"));
+	ui->nv_pp_item1->clicked().connect(boost::bind(&WtAccounts::subscriber_show_operation_tab, this, "view"));
 	ui->nv_pp_item2->clicked().connect(boost::bind(&WtAccounts::subscriber_show_operation_tab, this, "create"));
 	ui->nv_pp_item3->clicked().connect(boost::bind(&WtAccounts::subscriber_show_operation_tab, this, "edit"));
 	ui->nv_pp_item4->clicked().connect(boost::bind(&WtAccounts::manage_services_dialog, this));
@@ -84,9 +87,20 @@ WtAccounts::WtAccounts(const Wt::WEnvironment& env) : Wt::WApplication(env), ui(
     ui->new_report_button->clicked().connect(boost::bind(&WtAccounts::p_account_operation_create_Report, this, "fast"));
 
 
+    //if tabs closed
+    //int closedTABindex;
+
+    ui->main_tabs->tabClosed().connect(this,&WtAccounts::checkIndex_TAB_close);
+    //ui->main_tabs->tabClosed(1).connect(boost::bind(&WtAccounts::checkIndex_close, this));
+  //  ui->main_tabs->tabClosed(2).connect(boost::bind(&WtAccounts::checkIndex_close, this));
+  //  ui->main_tabs->tabClosed(3).connect(boost::bind(&WtAccounts::checkIndex_close, this));
+  //  ui->main_tabs->tabClosed(4).connect(boost::bind(&WtAccounts::checkIndex_close, this));
+
     //ui->refresh_button->clicked()
 	// search when you change text in edit for now it's comment because may slow program
 	// ui->user_search_edit->changed().connect(boost::bind(&WtAccounts::search_subscribers, this, "search"));
+   // ui->main_tabs->;
+	//ui->main_tabs->
 }
 
 WtAccounts::~WtAccounts()
@@ -232,11 +246,33 @@ std::string information_edit_mode = "";
 
 
 
+extern void WtAccounts::checkIndex_TAB_close(int closedTABindex)
+{
+
+	if (closedTABindex>4)//check if its not 1 of main tabs was closed then destroy it from memory
+	{
+		Wt::WWidget* temp =  ui->main_tabs->widget(closedTABindex);
+		ui->main_tabs->removeTab (temp);
+		  delete temp;
+    }
+	//std::cout<<"NUMBER OF TABS _ > "<<ui->main_tabs->count()<<std::endl;
 
 
+	//if all tabs are hiden then set welcome tab
+	bool EN1=ui->main_tabs->isTabHidden(0),
+		 EN2=ui->main_tabs->isTabHidden(1),
+		 EN3=ui->main_tabs->isTabHidden(2),
+		 EN4=ui->main_tabs->isTabHidden(3),
+		 EN5=ui->main_tabs->isTabHidden(4);
+
+     if (ui->main_tabs->count()==5 && EN1 && EN2 && EN3 && EN4 && EN5)
+     {
+    	 ui->welcome_user_tab_mi->setHidden(false);
+    	 ui->main_tabs->setCurrentIndex(4);
+     }
 
 
-
+}
 
 extern void WtAccounts::edit_subscriber_load_data()
 {
@@ -725,7 +761,7 @@ extern void WtAccounts::subscriber_show_operation_tab(std::string operation_name
 		ui->user_account_tab_mi->setHidden(false);
 		//ui->main_tabs->setTabEnabled(0, 1);
 		ui->main_tabs->setCurrentIndex(0);
-
+		//ui->welcome_user_tab_mi->setHidden(true);
 
 
 
@@ -744,7 +780,7 @@ extern void WtAccounts::subscriber_show_operation_tab(std::string operation_name
 		//ui->user_account_left_container->setOverflow(Wt::WContainerWidget::Overflow::OverflowAuto, Wt::Orientation::Vertical);
 
 
-
+/*
 		Wt::WContainerWidget *user_treeTable_container = new Wt::WContainerWidget(ui->user_account_left_container);
 		user_treeTable_container->setHtmlTagName("div");
 		user_treeTable_container->setWidth(Wt::WLength("100%"));
@@ -763,6 +799,7 @@ extern void WtAccounts::subscriber_show_operation_tab(std::string operation_name
 		//ui->user_treeTable->setWidth(Wt::WLength("70%"));
 		//ui->user_treeTable->addColumn(Wt::WString::fromUTF8("Абонентов"), 100);
 
+*/
 
 	    ui->user_tree_root = new Wt::WTreeTableNode(Wt::WString::fromUTF8("ТОО"));
 		ui->user_treeTable->setTreeRoot(ui->user_tree_root, Wt::WString::fromUTF8("Группа"));
@@ -7122,9 +7159,14 @@ mysql_query(&mysql,"SET NAMES 'UTF8'");
 
 
 
-			     				if (Wt::WString::fromUTF8(row[10])=="common") TypeOfcall="Городской";
-			     				if (Wt::WString::fromUTF8(row[10])=="outgoing mobile") TypeOfcall="Входяший";
-			     				if (Wt::WString::fromUTF8(row[10])=="international") TypeOfcall="Междугородный";
+			     				if (Wt::WString::fromUTF8(row[11])=="mobile call") TypeOfcall="Мобильная связь";
+			     				if (Wt::WString::fromUTF8(row[11])=="fixed service") TypeOfcall="Фиксированный сервис";
+			     				if (Wt::WString::fromUTF8(row[11])=="intercity call") TypeOfcall="Междугородный";
+			     				if (Wt::WString::fromUTF8(row[11])=="inner") TypeOfcall="Городской";
+			     				if (Wt::WString::fromUTF8(row[11])=="hot line") TypeOfcall="Горячая линия";
+			     				if (Wt::WString::fromUTF8(row[11])=="Unknown") TypeOfcall="Не Определен";
+			     				if (Wt::WString::fromUTF8(row[11])=="incoming") TypeOfcall="Входяший";
+			     				 std::cout<<std::endl<<std::endl<<Wt::WString::fromUTF8(row[10])<<std::endl<<std::endl;
 
 			     				new Wt::WText(Wt::WString::fromUTF8("Учет телефонных звонков"), CHECK_user_treeTablef->elementAt(row_number, 0));
 			     				new Wt::WText(Wt::WString::fromUTF8("Обычный"), CHECK_user_treeTablef->elementAt(row_number, 1));
@@ -7142,7 +7184,7 @@ mysql_query(&mysql,"SET NAMES 'UTF8'");
                                 std::string durtaion_call_string=std::to_string(durtaion_call);
                                 new Wt::WText(Wt::WString::fromUTF8(durtaion_call_string), CHECK_user_treeTablef->elementAt(row_number, 12));
 			     				new Wt::WText(Wt::WString::fromUTF8(row[10]), CHECK_user_treeTablef->elementAt(row_number, 13));
-
+			     				TypeOfcall="";
 			     				}
 			     				CHECK_user_treeTablef->refresh();
 			     				mysql_free_result(res);

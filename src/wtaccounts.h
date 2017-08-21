@@ -72,6 +72,8 @@ public:
 	void Configure_edited_report_data_Report(std::string operation_name);
 	//Serarch
 	void search_subscribers(std::string operation_name);
+    //check tabs that was closed
+	void checkIndex_TAB_close(int);
 
 
 

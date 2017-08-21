@@ -53,6 +53,8 @@
 #include <Wt/WApplication>
 #include <Wt/WPainter>
 
+#include <Wt/WImage>
+
 #include <Wt/WVBoxLayout>
 #include <Wt/WGridLayout>
 
@@ -106,6 +108,7 @@ public:
 	Wt::WLineEdit *user_search_edit;
 	Wt::WPushButton *user_search_button;
 	Wt::WPushButton *user_temp_button;
+	Wt::WContainerWidget *user_treeTable_container;
 	Wt::WTreeTable *user_treeTable;
 	Wt::WTreeTableNode *user_tree_root;
 	Wt::WTreeTableNode *user_tree_group;
@@ -350,13 +353,19 @@ public:
 
 	Wt::WPushButton *save_close_button_report_edit;//save and close button report
 
+
+
+	Wt::WContainerWidget * welcome_user_tab;
+	Wt::WMenuItem * welcome_user_tab_mi;
+	Wt::WContainerWidget *user_welcome_container;
+
 	void setupUi(Wt::WContainerWidget *PageRoot)
 	{
 
 		Wt::WBootstrapTheme * p_wtTheme = new Wt::WBootstrapTheme();
 		p_wtTheme->setVersion(Wt::WBootstrapTheme::Version3);
 		Wt::WApplication::instance()->setTheme(p_wtTheme);
-		Wt::WApplication::instance()->setTitle("Accountant");
+		Wt::WApplication::instance()->setTitle("ESEP");
 
 		addAllStyleSheets();
 
@@ -375,7 +384,7 @@ public:
 				main_navbar->setId("main_navbar");
 				main_navbar->setStyleClass(Wt::WString::fromUTF8("navbar navbar-default"));
 				main_navbar->setInline(0);
-				main_navbar->setTitle("Accountant");
+				main_navbar->setTitle("ESEP");
 				main_navbar->setResponsive("1");
 				{
 					main_menu = new Wt::WMenu(new Wt::WStackedWidget(), main_menu_container);
@@ -454,14 +463,14 @@ public:
 					nv_pp_menu->setStyleClass(Wt::WString::fromUTF8("Wt-popup dropdown-menu"));
 					nv_pp_menu_rightmenu->setInline(0);
 					{
-//						nv_pp_item1 = nv_pp_menu->addItem(Wt::WString::fromUTF8("Счета абонентов (Просмотр)"));
-//						nv_pp_item1->setId("nv_pp_item1");
-//						nv_pp_item1->setStyleClass(Wt::WString::fromUTF8(""));
-//						nv_pp_item1->setInline(0);
-//						nv_pp_item1->setIcon("");
-//						nv_pp_item1->setCheckable(0);
-//						nv_pp_item1->setChecked(0);
-//						nv_pp_item1->setCloseable(0);
+						nv_pp_item1 = nv_pp_menu->addItem(Wt::WString::fromUTF8("Счета абонентов (Просмотр)"));
+						nv_pp_item1->setId("nv_pp_item1");
+						nv_pp_item1->setStyleClass(Wt::WString::fromUTF8(""));
+						nv_pp_item1->setInline(0);
+						nv_pp_item1->setIcon("");
+						nv_pp_item1->setCheckable(0);
+						nv_pp_item1->setChecked(0);
+						nv_pp_item1->setCloseable(0);
 						nv_pp_item2 = nv_pp_menu->addItem(Wt::WString::fromUTF8("Содание нового абонента"));
 						nv_pp_item2->setId("nv_pp_item2");
 						nv_pp_item2->setStyleClass(Wt::WString::fromUTF8(""));
@@ -520,8 +529,8 @@ public:
 					user_account_tab->setStyleClass(Wt::WString::fromUTF8(""));
 					user_account_tab->setInline(0);
 					main_tabs->setTabEnabled(0, 1);
-					main_tabs->setTabHidden(0, 0);
-					main_tabs->setTabCloseable(0, 0);
+					main_tabs->setTabHidden(0, 1);
+					main_tabs->setTabCloseable(0, 1);
 					{
 						user_account_left_container = new Wt::WContainerWidget(user_account_tab);
 						user_account_left_container->setId("user_account_left_container");
@@ -552,6 +561,22 @@ public:
 							//user_treeTable->setId("user_treeTable");
 							//user_treeTable->setStyleClass(Wt::WString::fromUTF8("Wt-treetable"));
 							//user_treeTable->setInline(0);
+
+							user_treeTable_container = new Wt::WContainerWidget(user_account_left_container);
+							user_treeTable_container->setHtmlTagName("div");
+							user_treeTable_container->setWidth(Wt::WLength("100%"));
+							user_treeTable_container->setHeight(Wt::WLength("700px"));
+							{
+								user_treeTable = new Wt::WTreeTable(user_treeTable_container);
+								user_treeTable->setId("user_treeTable");
+								user_treeTable->setStyleClass(Wt::WString::fromUTF8("Wt-treetable"));
+								user_treeTable->setInline(0);
+								user_treeTable->tree()->setSelectionMode(Wt::SingleSelection);
+
+								user_tree_root = new Wt::WTreeTableNode(Wt::WString::fromUTF8("ТОО"));
+								user_tree_root->setSelectable(false);
+								user_treeTable->setTreeRoot(user_tree_root, Wt::WString::fromUTF8("Группа"));
+							}
 						}
 						user_account_right_container = new Wt::WContainerWidget(user_account_tab);
 						user_account_right_container->setId("user_account_right_container");
@@ -2101,6 +2126,34 @@ public:
 
 										////////////end of reprt form
 
+										std::string HiText="";
+										time_t theTime = time(NULL);
+										struct tm *aTime = localtime(&theTime);
+										if (aTime->tm_hour<12) {HiText="Доброе утро";} else
+										if (aTime->tm_hour>12 && aTime->tm_hour<18) {HiText="Добро пожаловать";}
+										else HiText="Добрый вечер";
+                                        std::cout<<std::endl<<"TIME "<<aTime->tm_hour<<std::endl;
+										welcome_user_tab = new Wt::WContainerWidget(container_cp);
+										welcome_user_tab_mi = main_tabs->addTab(welcome_user_tab, Wt::WString::fromUTF8(HiText));
+										welcome_user_tab->setId("welcome_user_tab");
+										welcome_user_tab->setInline(0);
+										welcome_user_tab->setStyleClass(Wt::WString::fromUTF8("div_center"));
+
+										main_tabs->setTabEnabled(4, 1);
+										main_tabs->setTabHidden(4, 0);
+										main_tabs->setTabCloseable(4, 1);
+										{
+
+										//Wt::WText *user_address_text_report7 = new Wt::WText(welcome_user_tab);
+//										user_address_text_report7->setId("user_address_text_report3");
+
+//										user_address_text_report7->setInline(0);
+//										user_address_text_report7->setTextFormat((Wt::TextFormat)0);
+//										user_address_text_report7->setText(Wt::WString::fromUTF8("Доброе утро сейчас"+ TIME в системе зарегестрированно 2300 пользователей и подключено 1554 улуг"));
+//
+											Wt::WImage *img = new Wt::WImage("ESEP.png", welcome_user_tab);
+
+										}
 				}
 			}
 		}
