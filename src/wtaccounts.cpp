@@ -88,13 +88,12 @@ WtAccounts::WtAccounts(const Wt::WEnvironment& env) : Wt::WApplication(env), ui(
 
 
     //if tabs closed
-    //int closedTABindex;
-
     ui->main_tabs->tabClosed().connect(this,&WtAccounts::checkIndex_TAB_close);
     //ui->main_tabs->tabClosed(1).connect(boost::bind(&WtAccounts::checkIndex_close, this));
-  //  ui->main_tabs->tabClosed(2).connect(boost::bind(&WtAccounts::checkIndex_close, this));
-  //  ui->main_tabs->tabClosed(3).connect(boost::bind(&WtAccounts::checkIndex_close, this));
-  //  ui->main_tabs->tabClosed(4).connect(boost::bind(&WtAccounts::checkIndex_close, this));
+
+    //if we switch month with fast button forfard and back
+    ui->previous_button->clicked().connect(boost::bind(&WtAccounts::month_button_fastswitch, this, 2));
+	ui->next_button->clicked().connect(boost::bind(&WtAccounts::month_button_fastswitch, this, 1));
 
     //ui->refresh_button->clicked()
 	// search when you change text in edit for now it's comment because may slow program
@@ -118,22 +117,22 @@ MYSQL_ROW add_row;
 
 
 // mysql connections settings
-const char *server="52.8.83.48";
-const char *user="007";
-const char *password="Yeshimbetov^Karakalpak8";
-const char *database="account_database";
-int query_state;
-std::string mysql_query_str = "";
+//const char *server="52.8.83.48";
+//const char *user="007";
+//const char *password="Yeshimbetov^Karakalpak8";
+//const char *database="account_database";
+//int query_state;
+//std::string mysql_query_str = "";
 
 
 
 //////// mysql connections settings
-//const char *server="localhost";
-//const char *user="root";
-//const char *password="admin";
-//const char *database="account_database";
-//int query_state;
-//std::string mysql_query_str = "";
+const char *server="localhost";
+const char *user="root";
+const char *password="admin";
+const char *database="account_database";
+int query_state;
+std::string mysql_query_str = "";
 
 // table variable for update data in table
 Wt::WTable *ip_address_table;
@@ -244,7 +243,15 @@ std::string description_edit_mode = "";
 std::string information_edit_mode = "";
 
 
+//if we pushed fast month switch
+extern void WtAccounts::month_button_fastswitch(int type){
 
+	//ui->month_combo_box->currentIndex()+1;
+       if (type==1){ui->month_combo_box->setCurrentIndex(ui->month_combo_box->currentIndex()+1);}
+       if (type==2){ui->month_combo_box->setCurrentIndex(ui->month_combo_box->currentIndex()-1);}
+	subscriber_fullName_changed();
+
+}
 
 extern void WtAccounts::checkIndex_TAB_close(int closedTABindex)
 {
@@ -282,7 +289,7 @@ extern void WtAccounts::edit_subscriber_load_data()
 	//ui->main_tabs->setTabEnabled(0, 1);
 	ui->main_tabs->setCurrentIndex(2);
 
-
+	try{
 	mysql_init(&mysql);
 	conn=mysql_real_connect(&mysql, server, user, password, database, 0, 0, 0);
 	if(conn==NULL)
@@ -362,9 +369,10 @@ extern void WtAccounts::edit_subscriber_load_data()
 			"AND subscriber.subscriber_id = contacts.subscriber_id AND contacts.subscriber_id = requisites.subscriber_id "
 			"AND requisites.subscriber_id = information_fields.subscriber_id";
 
+	std::cout<<std::endl<<"query_state S1"<<std::endl;
 	query_state=mysql_query(conn, mysql_subscriber_all_table_data.c_str());
-
-
+	std::cout<<std::endl<<"query_state E1"<<std::endl;
+   } catch (const std::exception& e) {std::cout <<"query_state1 error -> "<< e.what()<<std::endl;}
 
 
 
@@ -685,6 +693,38 @@ private:
 
     size_t f =out.find("height");
     out.erase (f,std::string("height:800.0px;").length());
+    f =out.find("id=\"CHECK_user_treeTable\"");
+    out.erase (f,std::string("id=-CHECK_user_treeTable-").length());
+
+    f =out.find("id=\"CHECK_user_treeTableth\"");
+    out.erase (f,std::string("id=-CHECK_user_treeTabletb-").length());
+    f =out.find("id=\"CHECK_user_treeTabletb\"");
+    out.erase (f,std::string("id=-CHECK_user_treeTabletb-").length());
+
+
+    f =out.find("id=");
+    while (f!=std::string::npos)
+    {
+    	//std::cout<<std::endl<<"FOUND "<<f<<std::endl;
+    out.erase (f,std::string("id=-ofn8mge-").length());
+    f =out.find("id=");
+	}
+
+//    f =out.find("Учет телефонных звонков");
+//     while (f!=std::string::npos)
+//     {
+//     // std::cout<<std::endl<<"FOUND "<<f<<std::endl;
+//      out.erase (f,std::string("Учет телефонных звонков").length());
+//      f =out.find("Учет телефонных звонков");
+//    }
+
+//	     f =out.find("Обычный");
+//	    	     while (f!=std::string::npos)
+//	    	     {
+//	    	     // std::cout<<std::endl<<"FOUND "<<f<<std::endl;
+//	    	      out.erase (f,std::string("Обычный").length());
+//	    	      f =out.find("Обычный");
+//	    	  }
 
     std::ofstream out2("output.txt");
      out2 << out;
@@ -727,10 +767,12 @@ private:
     //renderer.st
 
     if (state==1){
-  renderer.setMargin(0);
+  //renderer.setMargin(0);
   renderer.setDpi(110);
     }
-  renderer.render(html);
+  if (renderer.render(html))
+  { std::cout<<std::endl<<"RENER OVER"<<std::endl;}
+ std::cout<<std::endl<<"WAIT"<<std::endl;
   //HPDF_Page_EndText (page);
   //OUTput in file to test HTML
 
@@ -766,7 +808,7 @@ extern void WtAccounts::subscriber_show_operation_tab(std::string operation_name
 
 
 
-
+       try {
 		mysql_init(&mysql);
 		conn=mysql_real_connect(&mysql, server, user, password, database, 0, 0, 0);
 		if(conn==NULL)
@@ -807,7 +849,9 @@ extern void WtAccounts::subscriber_show_operation_tab(std::string operation_name
 	    Wt::WTreeTableNode *tree_node;
 
 	// add node form mysql table
+	    std::cout<<std::endl<<"query_state S2"<<std::endl;
 		query_state=mysql_query(conn, "select * from subscriber_group ORDER BY group_name");
+
 		if(query_state!=0)
 		{
 		   std::cout<<mysql_error(conn)<<std::endl<<std::endl;
@@ -815,17 +859,19 @@ extern void WtAccounts::subscriber_show_operation_tab(std::string operation_name
 		res=mysql_store_result(conn);
 		std::string mysql_get_subscriber_fullName = "";
 		std::cout<<"MySQL Values in the amaDB Table."<<std::endl<<std::endl;
+		std::cout<<std::endl<<"query_state E1"<<std::endl;
 		while((row=mysql_fetch_row(res))!=NULL)
 		{
 			ui->user_tree_group  = new Wt::WTreeTableNode(Wt::WString::fromUTF8(row[1]), 0, ui->user_tree_root);
 			ui->user_tree_group->setSelectable(false);
-
+			std::cout<<std::endl<<"query_state S3"<<std::endl;
 			mysql_get_subscriber_fullName = "select full_name from subscriber where subscriber.group_id = '"+boost::lexical_cast<std::string>(row[0])+"' ORDER BY full_name";
 			query_state=mysql_query(conn, mysql_get_subscriber_fullName.c_str());
 			if(query_state!=0)
 			{
 			   std::cout<<mysql_error(conn)<<std::endl<<std::endl;
 			}
+			std::cout<<std::endl<<"query_state E3"<<std::endl;
 			add_res=mysql_store_result(conn);
 			while((add_row=mysql_fetch_row(add_res))!=NULL)
 			{
@@ -902,7 +948,7 @@ extern void WtAccounts::subscriber_show_operation_tab(std::string operation_name
 		ui->total_month_credit_table->addStyleClass("table form-inline table-bordered table-hover table-condensed table-striped");
 
 */
-
+       } catch (const std::exception& e) {std::cout <<"View error -> "<< e.what()<<std::endl;}
 	} else if (operation_name == "create") // ****************************************************************
 	{
 		ui->create_user_tab_mi->setHidden(false);
@@ -917,7 +963,7 @@ extern void WtAccounts::subscriber_show_operation_tab(std::string operation_name
 
 		//ui->user_treeTable->tree()
 
-
+      try{
 	    Wt::WMessageBox *messageBox;
 		std::string changedSubscriberName = "";
 		Wt::WTreeNode *selected_node; // operator* returns contents of an interator
@@ -973,7 +1019,7 @@ extern void WtAccounts::subscriber_show_operation_tab(std::string operation_name
 					"WHERE subscriber.full_name = '"+changedSubscriberName+"' AND subscriber_group.group_id = subscriber.group_id "
 					"AND subscriber.subscriber_id = contacts.subscriber_id AND contacts.subscriber_id = requisites.subscriber_id "
 					"AND requisites.subscriber_id = information_fields.subscriber_id";
-
+			std::cout<<std::endl<<"query_state S4"<<std::endl;
 			query_state=mysql_query(conn, mysql_subscriber_all_table_data.c_str());
 
 
@@ -990,7 +1036,7 @@ extern void WtAccounts::subscriber_show_operation_tab(std::string operation_name
 			res=mysql_store_result(conn);
 			std::cout<<"MySQL Values in the amaDB Table."<<std::endl<<std::endl;
 			row=mysql_fetch_row(res);
-
+			std::cout<<std::endl<<"query_state E4"<<std::endl;
 
 			//std::cout << row[0] << " *****************************************************" << std::endl;
 			//std::cout << row[1] << " *****************************************************" << std::endl;
@@ -1111,7 +1157,7 @@ extern void WtAccounts::subscriber_show_operation_tab(std::string operation_name
 
 
 
-
+			std::cout<<std::endl<<"query_state S5"<<std::endl;
 			// phone number entry load data
 			std::string mysql_get_phone_numbers = "SELECT number FROM phone_numbers WHERE phone_numbers.subscriber_id = '"+subscriber_id_edit_mode+"'";
 			query_state=mysql_query(conn, mysql_get_phone_numbers.c_str());
@@ -1132,7 +1178,7 @@ extern void WtAccounts::subscriber_show_operation_tab(std::string operation_name
 					new_phone_numbers.append(", ");
 				}
 			}
-
+			std::cout<<std::endl<<"query_state E5"<<std::endl;
 			ui->user_number_edit_edit_user_tab->setText(Wt::WString::fromUTF8(new_phone_numbers));
 
 
@@ -1222,6 +1268,7 @@ extern void WtAccounts::subscriber_show_operation_tab(std::string operation_name
 
 			messageBox->show();
 		}
+	 } catch (const std::exception& e) {std::cout <<"View2 error -> "<< e.what()<<std::endl;}
 	}
 
 
@@ -5565,7 +5612,7 @@ extern void WtAccounts::create_new_call_tariff_dialog(std::string operation_name
     Wt::WLabel *tariff_label;
     Wt::WContainerWidget *tariff_edit_container;
     Wt::WLineEdit *tariff_edit;
-    if (operation_name != "Edit_text") {//hide price if we edit text
+    if (operation_name != "Edit_price") {//hide price if we edit text
 
     tariff_label = new Wt::WLabel(Wt::WString::fromUTF8("Тариф:"),
     				       dialog->contents());
@@ -5597,7 +5644,7 @@ extern void WtAccounts::create_new_call_tariff_dialog(std::string operation_name
 
 
     Wt::WLineEdit *le;
-    if (operation_name != "Edit_price") {//hide  all this containers if we edit zone price
+    if (operation_name != "Edit_price") { //hide  all this containers if we edit zone price
     // tariff date label and date edit
     tariff_date_label = new Wt::WLabel(Wt::WString::fromUTF8("Дата тарифа:"),
     				       dialog->contents());
@@ -5765,7 +5812,7 @@ extern void WtAccounts::create_new_call_tariff_dialog(std::string operation_name
 
 
    mysql_get_ip_addressesQ = "SELECT * FROM account_database.call_tariff "
-		   "WHERE code='"+ operation_id +"'";
+		   "WHERE tariff_id='"+ operation_id +"'";
 
 
 	query_state=mysql_query(conn, mysql_get_ip_addressesQ.c_str());
@@ -5780,7 +5827,7 @@ extern void WtAccounts::create_new_call_tariff_dialog(std::string operation_name
 		    description_edit->setText(Wt::WString::fromUTF8(row[2]));
 			country_edit->setText(Wt::WString::fromUTF8(row[3]));
 			country_code_edit->setText(Wt::WString::fromUTF8(row[4]));
-			//tariff_edit->setText(Wt::WString::fromUTF8(row[5]));
+			tariff_edit->setText(Wt::WString::fromUTF8(row[5]));
 			currency_edit->setText(Wt::WString::fromUTF8(row[6]));
 
 			if (Wt::WString::fromUTF8(row[7])!="0000-00-00") {
@@ -5827,7 +5874,7 @@ extern void WtAccounts::create_new_call_tariff_dialog(std::string operation_name
 
 
    		    add_zone_edit->setText(Wt::WString::fromUTF8(row[1]));
-   			tariff_edit->setText(Wt::WString::fromUTF8(row[5]));
+   		//	tariff_edit->setText(Wt::WString::fromUTF8(row[5]));
    			currency_edit->setText(Wt::WString::fromUTF8(row[6]));
 
    		//	tariff_date_edit->setText(Wt::WString::fromUTF8(row[7]));
@@ -5872,9 +5919,10 @@ extern void WtAccounts::create_new_call_tariff_dialog(std::string operation_name
 
 
 
-		if (operation_name != "Edit_text") {tariff = boost::lexical_cast<std::string>(tariff_edit->text());}
+		//if (operation_name != "Edit_text") {tariff = boost::lexical_cast<std::string>(tariff_edit->text());}
 
 		if(operation_name != "Edit_price"){
+		tariff = boost::lexical_cast<std::string>(tariff_edit->text());
 		description = description_edit->text().toUTF8();
 		country = country_edit->text().toUTF8();
 		country_code = boost::lexical_cast<std::string>(country_code_edit->text());
@@ -5928,21 +5976,21 @@ extern void WtAccounts::create_new_call_tariff_dialog(std::string operation_name
 					"'"+ tariff +"', '"+ currency +"', '"+ tariff_date +"', '"+ rounding +"', "
 					"'"+ cost_rounding +"', '"+ operator_ +"', '"+ plan +"', '"+ add_text +"','"+ zone +"')";
 		    }
-
+		 //
 		 if (operation_name == "Edit_text")
-		 		    {
+		 		    {std::cout<<std::endl<<"selected_service= selected_node->  "<<currency<<std::endl;
 		 mysql_insert_create_call_tariff = "UPDATE account_database.call_tariff SET "
-		 		"description='"+ description +"', country='"+ country +"', code='"+ country_code +"',  currency='"+ currency +"', "
+		 		"tariff='"+ tariff +"',description='"+ description +"', country='"+ country +"', code='"+ country_code +"', currency='"+ currency +"', "
 		 		"tariff_date='"+ tariff_date +"', round='"+ rounding +"', round_price='"+ cost_rounding +"', "
 		 	     "operator='"+ operator_ +"', plan='"+ plan +"', add_text='"+ add_text +"',zone_description='"+ zone +"' "
-		 		" WHERE code='"+ operation_id +"'";
+		 		" WHERE tariff_id='"+ operation_id +"'";
 		 		    }
 
 
 		 if (operation_name == "Edit_price")
 		 		 		    {
 		 		 mysql_insert_create_call_tariff = " UPDATE account_database.call_tariff "
-		 				 "SET tariff='"+ tariff +"',zone_description='"+ zone +"',currency='"+ currency +"' WHERE zone_description='"+ operation_id +"'";
+		 				 "SET zone_description='"+ zone +"',currency='"+ currency +"' WHERE zone_description='"+ operation_id +"'";
 		 		 		    }
 
 
@@ -5970,12 +6018,12 @@ extern void WtAccounts::create_new_call_tariff_dialog(std::string operation_name
 		call_tariff_table->elementAt(0, 9)->addWidget(new Wt::WText(Wt::WString::fromUTF8("Оператор")));
 		call_tariff_table->elementAt(0, 10)->addWidget(new Wt::WText(Wt::WString::fromUTF8("План")));
 		call_tariff_table->elementAt(0, 11)->addWidget(new Wt::WText(Wt::WString::fromUTF8("Текст начисления")));
-
+		call_tariff_table->elementAt(0, 12)->addWidget(new Wt::WText(Wt::WString::fromUTF8("id")));
 		int row_number = 0;
 
 
 
-		std::string mysql_call_tariff_table_data = "SELECT * FROM account_database.call_tariff";
+		std::string mysql_call_tariff_table_data = "SELECT * FROM account_database.call_tariff ORDER BY RAND() LIMIT 100";
 
 		query_state=mysql_query(conn, mysql_call_tariff_table_data.c_str());
 		if(query_state!=0)
@@ -5998,7 +6046,7 @@ extern void WtAccounts::create_new_call_tariff_dialog(std::string operation_name
 			new Wt::WText(Wt::WString::fromUTF8(row[10]), call_tariff_table->elementAt(row_number, 9));
 			new Wt::WText(Wt::WString::fromUTF8(row[11]), call_tariff_table->elementAt(row_number, 10));
 			new Wt::WText(Wt::WString::fromUTF8(row[12]), call_tariff_table->elementAt(row_number, 11));
-
+			new Wt::WText(Wt::WString::fromUTF8(row[0]), call_tariff_table->elementAt(row_number, 12));
 		}
 		call_tariff_table->refresh();
 		mysql_free_result(res);
@@ -6039,7 +6087,7 @@ extern void WtAccounts::create_new_select_tariff_dialog_S(std::string operation_
 
 
 	    Tarif_search_button_edit = new Wt::WPushButton(dialog_edit_tariff->footer());
-	    Tarif_search_button_edit->setId("user_search_button");
+	   // Tarif_search_button_edit->setId("user_search_button");
 	    Tarif_search_button_edit->setStyleClass(Wt::WString::fromUTF8("with-label btn btn-default btn btn-default with-label"));
 	    Tarif_search_button_edit->setInline(0);
 	    Tarif_search_button_edit->setEmptyText(Wt::WString::fromUTF8(""));
@@ -6064,6 +6112,7 @@ extern void WtAccounts::create_new_select_tariff_dialog_S(std::string operation_
 		std::string temp1_text;
 		std::string temp2_text;
 		std::string temp3_text;
+		std::string tempid_text;
 	    Wt::WTreeTable *treeTable;
 		treeTable = new Wt::WTreeTable(call_tariff_table_container_edit);
 	    //treeTable->resize(650, 300);
@@ -6071,20 +6120,24 @@ extern void WtAccounts::create_new_select_tariff_dialog_S(std::string operation_
 	    treeTable->tree()->setSelectionMode(Wt::SingleSelection);
 
 	    if (operation_name == "Edit_text") {
+
 	    	temp1_text="Описание";
-	    	temp2_text="Коды и страны";
-	    	temp3_text="Код";
+	    	temp2_text="id";
+	    	temp3_text="Коды и страны";
+	    	tempid_text="Код";
 	    }else {
 	    	temp1_text="Описание";
 	    	temp2_text="Зоны и страны";
 	    	temp3_text="Зоны";
 	    }
 	    treeTable->addColumn(Wt::WString::fromUTF8(temp1_text), 300);
-	    //treeTable->addColumn(Wt::WString::fromUTF8("Фикс. сумма"), 100);
+	    if (operation_name == "Edit_text") {treeTable->addColumn(Wt::WString::fromUTF8(tempid_text),150);}
 
 	    Wt::WTreeTableNode *tree_root;
-
-		tree_root = new Wt::WTreeTableNode(Wt::WString::fromUTF8(temp2_text));
+	    if (operation_name == "Edit_text") {
+		tree_root = new Wt::WTreeTableNode(Wt::WString::fromUTF8(temp2_text),0);}
+	    else
+	    tree_root = new Wt::WTreeTableNode(Wt::WString::fromUTF8(temp2_text));
 	    treeTable->setTreeRoot(tree_root, Wt::WString::fromUTF8(temp3_text));
 
 	    Wt::WTreeTableNode *tree_node;
@@ -6094,7 +6147,7 @@ extern void WtAccounts::create_new_select_tariff_dialog_S(std::string operation_
 	// add node form mysql table
 	    if (operation_name == "Edit_text")
 	    {
-	    	mysql_get_ip_briffdata_for_select = "SELECT code,description FROM account_database.call_tariff LIMIT 100";
+	    	mysql_get_ip_briffdata_for_select = "SELECT tariff_id,description,code FROM account_database.call_tariff LIMIT 100";
 	    } else // operation_name == "edit"
 	    {
 	    	mysql_get_ip_briffdata_for_select = "SELECT zone_description,description FROM account_database.call_tariff GROUP BY zone_description LIMIT 100";
@@ -6112,7 +6165,10 @@ extern void WtAccounts::create_new_select_tariff_dialog_S(std::string operation_
 	    	//Dont show in selecet menu if there is no zone or code
 	    	if (Wt::WString::fromUTF8(row[0])!=""){
 	    	tree_node  = new Wt::WTreeTableNode(Wt::WString::fromUTF8(row[0]), 0, tree_root);
-	    	tree_node ->setColumnWidget(1, new Wt::WText(Wt::WString::fromUTF8(row[1])));}
+	    	tree_node ->setColumnWidget(1, new Wt::WText(Wt::WString::fromUTF8(row[1])));
+	    	if (operation_name == "Edit_text")
+	    		    			    	{tree_node ->setColumnWidget(2, new Wt::WText(Wt::WString::fromUTF8(row[2])));}
+	    	}
 	    	//tree_node ->setColumnWidget(2, new Wt::WText(Wt::WString::fromUTF8(row[2])));}
 	    }
 
@@ -6132,9 +6188,9 @@ extern void WtAccounts::create_new_select_tariff_dialog_S(std::string operation_
 
 
 	    Tarif_search_button_edit->clicked().connect(std::bind([=] () {
-
+try {
 	    	Wt::WTreeTableNode *tree_root;
-	    	//007 edit
+
 	    	tree_root = new Wt::WTreeTableNode(Wt::WString::fromUTF8(temp2_text));
 	    	treeTable->setTreeRoot(tree_root, Wt::WString::fromUTF8(temp3_text));
 
@@ -6157,7 +6213,7 @@ extern void WtAccounts::create_new_select_tariff_dialog_S(std::string operation_
 	    	// add node form mysql table
 	    	if (operation_name == "Edit_text")
 	    	{
-	    		mysql_get_ip_briffdata_for_select = "SELECT code,description FROM account_database.call_tariff WHERE locate('"+ tarif_search_text +"',code)>0 OR locate('"+ tarif_search_text +"',description)>0 OR locate('"+ tarif_search_text +"',zone_description)>0 LIMIT 20";
+	    		mysql_get_ip_briffdata_for_select = "SELECT tariff_id,description,code FROM account_database.call_tariff WHERE locate('"+ tarif_search_text +"',code)>0 OR locate('"+ tarif_search_text +"',description)>0 OR locate('"+ tarif_search_text +"',zone_description)>0 LIMIT 20";
 	    	} else // operation_name == "edit"
 	    	{
 	    		mysql_get_ip_briffdata_for_select = "SELECT zone_description,description FROM account_database.call_tariff WHERE locate('"+ tarif_search_text +"',zone_description)>0 GROUP BY zone_description LIMIT 10";
@@ -6169,6 +6225,7 @@ extern void WtAccounts::create_new_select_tariff_dialog_S(std::string operation_
 	    	}
 	    	res=mysql_store_result(conn);
 	    	std::cout<<"MySQL Values in the amaDB Table."<<std::endl<<std::endl;
+
 	    	while((row=mysql_fetch_row(res))!=NULL)
 	    	{
 
@@ -6176,6 +6233,8 @@ extern void WtAccounts::create_new_select_tariff_dialog_S(std::string operation_
 	    		if (Wt::WString::fromUTF8(row[0])!=""){
 	    			tree_node  = new Wt::WTreeTableNode(Wt::WString::fromUTF8(row[0]), 0, tree_root);
 	    			tree_node ->setColumnWidget(1, new Wt::WText(Wt::WString::fromUTF8(row[1])));
+	    			if (operation_name == "Edit_text")
+	    			    	{tree_node ->setColumnWidget(2, new Wt::WText(Wt::WString::fromUTF8(row[2])));}
 	    			}
 	    		//tree_node ->setColumnWidget(2, new Wt::WText(Wt::WString::fromUTF8(row[2])));}
 	    	}
@@ -6183,7 +6242,7 @@ extern void WtAccounts::create_new_select_tariff_dialog_S(std::string operation_
 	    	mysql_free_result(res);
 	    	mysql_close(conn);
 	    	tree_root->expand();
-
+} catch (const std::exception& e) {std::cout <<"Search in code tariff error -> "<< e.what()<<std::endl;}
 	    }));
 
 
@@ -6281,7 +6340,7 @@ Wt::WPushButton *Tarif_search_button;
 
 
     Tarif_search_button = new Wt::WPushButton(dialog->footer());
-    Tarif_search_button->setId("user_search_button");
+   // Tarif_search_button->setId("user_search_button");
     Tarif_search_button->setStyleClass(Wt::WString::fromUTF8("with-label btn btn-default btn btn-default with-label"));
     Tarif_search_button->setInline(0);
     Tarif_search_button->setEmptyText(Wt::WString::fromUTF8(""));
@@ -6362,7 +6421,7 @@ Wt::WPushButton *Tarif_search_button;
 	call_tariff_table->elementAt(0, 9)->addWidget(new Wt::WText(Wt::WString::fromUTF8("Оператор")));
 	call_tariff_table->elementAt(0, 10)->addWidget(new Wt::WText(Wt::WString::fromUTF8("План")));
 	call_tariff_table->elementAt(0, 11)->addWidget(new Wt::WText(Wt::WString::fromUTF8("Текст начисления")));
-
+	call_tariff_table->elementAt(0, 12)->addWidget(new Wt::WText(Wt::WString::fromUTF8("id")));
 	int row_number = 0;
 
 
@@ -6390,7 +6449,7 @@ Wt::WPushButton *Tarif_search_button;
 		new Wt::WText(Wt::WString::fromUTF8(row[10]), call_tariff_table->elementAt(row_number, 9));
 		new Wt::WText(Wt::WString::fromUTF8(row[11]), call_tariff_table->elementAt(row_number, 10));
 		new Wt::WText(Wt::WString::fromUTF8(row[12]), call_tariff_table->elementAt(row_number, 11));
-
+		new Wt::WText(Wt::WString::fromUTF8(row[0]), call_tariff_table->elementAt(row_number, 12));
 	}
 	row_number = 0;
 	call_tariff_table->addStyleClass("table form-inline table-bordered table-hover table-condensed table-striped top_mar top_pad");
@@ -6415,6 +6474,8 @@ Wt::WPushButton *Tarif_search_button;
 
    //search
     Tarif_search_button->clicked().connect(std::bind([=] () {
+ try {
+	 std::cout<<"Trying to search tariff"<<std::endl;
     	call_tariff_table->clear();
     	int row_number2 = 0;
     	std::string mysql_search_call_tariff_table_data="";
@@ -6443,6 +6504,7 @@ Wt::WPushButton *Tarif_search_button;
 
 
    query_state=mysql_query(conn, mysql_search_call_tariff_table_data.c_str());
+   std::cout<<"Trying to search tariff query"<<std::endl;
 
    if(query_state!=0)
    	   	{
@@ -6468,7 +6530,8 @@ Wt::WPushButton *Tarif_search_button;
    	   	}
    		mysql_free_result(res);
    		mysql_close(conn);
-
+ }catch (const std::exception& e) {std::cout <<"Tariff search -> "<< e.what()<<std::endl;}
+   	 std::cout<<"Trying to search tariff END"<<std::endl;
 
     }));
 
@@ -6502,9 +6565,8 @@ Wt::WPushButton *Tarif_search_button;
 
 
 
-
-
 extern void WtAccounts::subscriber_fullName_changed() {
+	try {
 	//treeTable->tree()->itemSelectionChanged()
     Wt::WMessageBox *messageBox;
 
@@ -6604,6 +6666,7 @@ extern void WtAccounts::subscriber_fullName_changed() {
 
 		mysql_free_result(res);
 		mysql_free_result(add_res);
+
 
 
 
@@ -6805,7 +6868,7 @@ extern void WtAccounts::subscriber_fullName_changed() {
 		//if subscriber have IP
 		if ((row=mysql_fetch_row(res))!=NULL){
 			std::string Cur_user_IP=row[0];
-			mysql_traffic_and_calls_table_data = "SELECT sum(total_bytes),count(total_bytes) FROM account_database.netflow_data "
+			mysql_traffic_and_calls_table_data = "SELECT sum(total_bytes),count(total_bytes) FROM account_database.cal_netflow_data "
 					"WHERE source_address='"+Cur_user_IP+"' AND MONTH(receive_date) = '"+current_month+"' AND YEAR(receive_date)='"+current_year+"'";
 
 			row_number = 0;
@@ -6865,6 +6928,87 @@ extern void WtAccounts::subscriber_fullName_changed() {
 
 
 		ui->traffic_call_table->addStyleClass("table form-inline table-bordered table-hover table-condensed table-striped");
+		double Sub_main_dept;
+		double Sub_main_paid;
+		std::string Sub_main_diffrance;
+
+				mysql_get_ip_address_and_phone_numbers = "SELECT sum(quantity)"
+						"FROM subscriber_transaction "
+						"WHERE subscriber_transaction.transaction_type = 'Начисление'"
+						"AND MONTH(transaction_date) = '"+current_month+"' "
+						"AND YEAR(transaction_date) = '"+current_year+"'"
+				 "AND subscriber_id ='"+subscriber_id_view_mode+"'";
+				query_state=mysql_query(conn, mysql_get_ip_address_and_phone_numbers.c_str());
+
+
+				if(query_state!=0)
+				{
+					std::cout<<mysql_error(conn)<<std::endl<<std::endl;
+				}
+				add_res=mysql_store_result(conn);
+				row=mysql_fetch_row(add_res);
+				if (row != NULL)
+				{
+					if (row[0]!=NULL){Sub_main_dept=boost::lexical_cast<double>(row[0]);
+					ui->month_credit_edit->setText(Wt::WString::fromUTF8(row[0]));
+					std::cout<<"Sub_main_dept  "<<Sub_main_dept<<std::endl;} else
+					 ui->month_credit_edit->setText(Wt::WString::fromUTF8("0"));
+					mysql_free_result(add_res);
+				}
+
+				mysql_get_ip_address_and_phone_numbers = "SELECT sum(quantity)"
+						"FROM subscriber_transaction "
+						"WHERE subscriber_transaction.transaction_type = 'Оплата'"
+						"AND MONTH(transaction_date) = '"+current_month+"' "
+						"AND YEAR(transaction_date) = '"+current_year+"'";
+				 "AND subscriber_id ='"+subscriber_id_view_mode+"'";
+				query_state=mysql_query(conn, mysql_get_ip_address_and_phone_numbers.c_str());
+
+
+				if(query_state!=0)
+				{
+					std::cout<<mysql_error(conn)<<std::endl<<std::endl;
+				}
+				add_res=mysql_store_result(conn);
+				row=mysql_fetch_row(add_res);
+				if (row != NULL)
+				{
+					if (row[0]!=NULL){Sub_main_paid=boost::lexical_cast<double>(row[0]);
+					ui->month_paid_edit->setText(Wt::WString::fromUTF8(row[0]));}
+					else ui->month_paid_edit->setText(Wt::WString::fromUTF8("0"));
+					mysql_free_result(add_res);
+				}
+
+				Sub_main_diffrance = std::to_string(Sub_main_dept-Sub_main_paid);
+				ui->debt_edit->setText(Wt::WString::fromUTF8(Sub_main_diffrance));
+
+
+				mysql_get_ip_address_and_phone_numbers = "SELECT quantity "
+						"FROM subscriber_transaction "
+						"WHERE subscriber_transaction.transaction_type = 'Долг' "
+						"AND MONTH(transaction_date) = '"+current_month+"' "
+						"AND YEAR(transaction_date) = '"+current_year+"'";
+				"AND subscriber_id ='"+subscriber_id_view_mode+"'";
+				query_state=mysql_query(conn, mysql_get_ip_address_and_phone_numbers.c_str());
+
+				if(query_state!=0)
+				{
+					std::cout<<mysql_error(conn)<<std::endl<<std::endl;
+				}
+				add_res=mysql_store_result(conn);
+				row=mysql_fetch_row(add_res);
+				if (row != NULL)
+				{
+					if (row[0]!=NULL){Sub_main_paid=boost::lexical_cast<double>(row[0]);
+					ui->initial_debt_edit->setText(Wt::WString::fromUTF8(row[0]));}
+					else ui->initial_debt_edit->setText(Wt::WString::fromUTF8("0"));
+					mysql_free_result(add_res);
+				}
+
+
+
+
+
 
 
 		mysql_free_result(res);
@@ -6885,7 +7029,7 @@ extern void WtAccounts::subscriber_fullName_changed() {
 
 
 
-
+	} catch (const std::exception& e) {std::cout <<"Refresh -> "<< e.what()<<std::endl;}
 }
 
 
@@ -7112,15 +7256,15 @@ ResultOfoperationmeny=ui->p_account_operation_split_button_popup->result()->text
 					if (Wt::WString::fromUTF8("Телефонный трафик")==Wt::WString::fromUTF8(ResultOfoperationmeny)){
 
 						CHECK_user_treeTablef->elementAt(0, 0)->addWidget(new Wt::WText(Wt::WString::fromUTF8("Устройство")));
-						CHECK_user_treeTablef->elementAt(0, 1)->addWidget(new Wt::WText(Wt::WString::fromUTF8("Запись")));
+						//CHECK_user_treeTablef->elementAt(0, 1)->addWidget(new Wt::WText(Wt::WString::fromUTF8("Запись")));1
 						CHECK_user_treeTablef->elementAt(0, 2)->addWidget(new Wt::WText(Wt::WString::fromUTF8("Тип")));
 						CHECK_user_treeTablef->elementAt(0, 3)->addWidget(new Wt::WText(Wt::WString::fromUTF8("Номер А")));
 						CHECK_user_treeTablef->elementAt(0, 4)->addWidget(new Wt::WText(Wt::WString::fromUTF8("Номер Б")));
 						CHECK_user_treeTablef->elementAt(0, 5)->addWidget(new Wt::WText(Wt::WString::fromUTF8("Дата")));
 					    CHECK_user_treeTablef->elementAt(0, 6)->addWidget(new Wt::WText(Wt::WString::fromUTF8("Время")));
-						CHECK_user_treeTablef->elementAt(0, 7)->addWidget(new Wt::WText(Wt::WString::fromUTF8("Код")));
+						//CHECK_user_treeTablef->elementAt(0, 7)->addWidget(new Wt::WText(Wt::WString::fromUTF8("Код")));
 					    CHECK_user_treeTablef->elementAt(0, 8)->addWidget(new Wt::WText(Wt::WString::fromUTF8("Абонент")));
-						CHECK_user_treeTablef->elementAt(0, 9)->addWidget(new Wt::WText(Wt::WString::fromUTF8("Откуда")));
+						//CHECK_user_treeTablef->elementAt(0, 9)->addWidget(new Wt::WText(Wt::WString::fromUTF8("Куда")));
 						CHECK_user_treeTablef->elementAt(0, 10)->addWidget(new Wt::WText(Wt::WString::fromUTF8("Город")));
 			     		CHECK_user_treeTablef->elementAt(0, 11)->addWidget(new Wt::WText(Wt::WString::fromUTF8("Категория")));
 						CHECK_user_treeTablef->elementAt(0, 12)->addWidget(new Wt::WText(Wt::WString::fromUTF8("Секунд вызова")));
@@ -7138,11 +7282,11 @@ mysql_query(&mysql,"SET NAMES 'UTF8'");
 			     		std::cout<<mysql_error(&mysql)<<std::endl<<std::endl;}
 
 
-			     	std::string mysql_subscriber_all_table_data = "SELECT c.* FROM account_database.subscriber "
-			     			" AS a INNER JOIN account_database.phone_numbers AS b INNER JOIN account_database.ama_data AS "
-			     			"c ON a.subscriber_id=b.subscriber_id WHERE full_name='"+changedSubscriberName+"' "
-			     					"AND (b.number=c.numberB OR b.number=c.numberA) "
-			     					"AND year(c.start_date)=year(str_to_date('"+ResulYearCombo+"','%Y')) AND month(c.start_date)=month(str_to_date('"+ResulMonthCombo_index_string+"','%m')) ";
+			std::string mysql_subscriber_all_table_data = "SELECT c.* FROM account_database.phone_numbers "
+	     			" AS a INNER JOIN account_database.ama_data AS "
+	     			"c ON a.subscriber_id='"+subscriber_id_view_mode+"' "
+	     					"AND (a.number=c.numberB OR a.number=c.numberA) "
+	     					"AND year(c.start_date)=year(str_to_date('"+ResulYearCombo+"','%Y')) AND month(c.start_date)=month(str_to_date('"+ResulMonthCombo_index_string+"','%m'))";
 
 			     				int row_number = 0;
 			     				query_state=mysql_query(conn, mysql_subscriber_all_table_data.c_str());
@@ -7166,15 +7310,17 @@ mysql_query(&mysql,"SET NAMES 'UTF8'");
 			     				if (Wt::WString::fromUTF8(row[11])=="hot line") TypeOfcall="Горячая линия";
 			     				if (Wt::WString::fromUTF8(row[11])=="Unknown") TypeOfcall="Не Определен";
 			     				if (Wt::WString::fromUTF8(row[11])=="incoming") TypeOfcall="Входяший";
-			     				 std::cout<<std::endl<<std::endl<<Wt::WString::fromUTF8(row[10])<<std::endl<<std::endl;
+			     				std::cout<<std::endl<<std::endl<<Wt::WString::fromUTF8(row[10])<<std::endl<<std::endl;
 
 			     				new Wt::WText(Wt::WString::fromUTF8("Учет телефонных звонков"), CHECK_user_treeTablef->elementAt(row_number, 0));
-			     				new Wt::WText(Wt::WString::fromUTF8("Обычный"), CHECK_user_treeTablef->elementAt(row_number, 1));
+			     				//new Wt::WText(Wt::WString::fromUTF8("Обычный"), CHECK_user_treeTablef->elementAt(row_number, 1));1
 			     				new Wt::WText(Wt::WString::fromUTF8(row[1]), CHECK_user_treeTablef->elementAt(row_number, 3));
 			     				new Wt::WText(Wt::WString::fromUTF8(row[2]), CHECK_user_treeTablef->elementAt(row_number, 4));
 			     				new Wt::WText(Wt::WString::fromUTF8(row[3]), CHECK_user_treeTablef->elementAt(row_number, 5));
 			     				new Wt::WText(Wt::WString::fromUTF8(row[4]), CHECK_user_treeTablef->elementAt(row_number, 6));
 			     				new Wt::WText(Wt::WString::fromUTF8(changedSubscriberName), CHECK_user_treeTablef->elementAt(row_number, 8));
+
+			     				new Wt::WText(Wt::WString::fromUTF8(row[13]), CHECK_user_treeTablef->elementAt(row_number, 10));
 			     				new Wt::WText(Wt::WString::fromUTF8(TypeOfcall), CHECK_user_treeTablef->elementAt(row_number, 2));
                                 double durtaion_call = boost::lexical_cast<double>(row[7])/1000;
 
@@ -7222,9 +7368,9 @@ mysql_query(&mysql,"SET NAMES 'UTF8'");
 
 
 
-			     	std::string mysql_subscriber_all_table_data = "SELECT c.receive_date,c.source_address,Sum(c.total_bytes),full_name "
+			     	std::string mysql_subscriber_all_table_data = "SELECT c.receive_date,c.source_address,Sum(c.total_bytes)"
 			     			"FROM account_database.subscriber AS a INNER JOIN account_database.ip_addresses  AS b "
-			     			"INNER JOIN account_database.netflow_data AS c ON a.subscriber_id=b.subscriber_id  "
+			     			"INNER JOIN account_database.cal_netflow_data AS c ON a.subscriber_id=b.subscriber_id  "
 			     			"WHERE b.ip_address=c.source_address AND full_name='"+changedSubscriberName+"' "
 			     			"AND year(c.receive_date)=year(str_to_date('"+ResulYearCombo+"','%Y')) AND month(c.receive_date)=month(str_to_date('"+ResulMonthCombo_index_string+"','%m')) "
 			     					"group by DATE_FORMAT(c.receive_date, '%d')";
@@ -7251,7 +7397,7 @@ mysql_query(&mysql,"SET NAMES 'UTF8'");
 			     				new Wt::WText(Wt::WString::fromUTF8("0"), CHECK_user_treeTablef->elementAt(row_number, 5));
 			     				new Wt::WText(Wt::WString::fromUTF8(row[0]), CHECK_user_treeTablef->elementAt(row_number, 6));
 			     				new Wt::WText(Wt::WString::fromUTF8(row[2]), CHECK_user_treeTablef->elementAt(row_number, 7));
-			     				new Wt::WText(Wt::WString::fromUTF8(row[3]), CHECK_user_treeTablef->elementAt(row_number, 8));
+			     				new Wt::WText(Wt::WString::fromUTF8(changedSubscriberName), CHECK_user_treeTablef->elementAt(row_number, 8));
 
 			     				}
 			     				CHECK_user_treeTablef->refresh();

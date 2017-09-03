@@ -75,6 +75,7 @@ public:
     //check tabs that was closed
 	void checkIndex_TAB_close(int);
 
+	void month_button_fastswitch(int);
 
 
 private:
