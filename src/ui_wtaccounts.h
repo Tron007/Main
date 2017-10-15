@@ -63,8 +63,10 @@
 #include <iostream>
 
 #include <time.h>
-
-
+//mail
+#include <cstring>
+#include <curl/curl.h>
+#include <unistd.h>
 
 class Ui_WtAccounts
 {
@@ -674,6 +676,8 @@ public:
 												p_account_operation_split_button_popup->addItem(Wt::WString::fromUTF8("Создать отчет"));
 												//p_account_operation_split_button_popup->addItem(Wt::WString::fromUTF8("Сгенерировать квитанцию"));
 												p_account_operation_split_button_popup->addItem(Wt::WString::fromUTF8("Начислить услуги вручную"));
+												p_account_operation_split_button_popup->addItem(Wt::WString::fromUTF8("Завести первоначальный долг"));
+												p_account_operation_split_button_popup->addItem(Wt::WString::fromUTF8("Разослать квитанции"));
 												account_operation_split_button->dropDownButton()->setMenu(p_account_operation_split_button_popup);
 							lock_button = new Wt::WPushButton(user_account_right_container);
 							lock_button->setId("lock_button");
@@ -839,7 +843,7 @@ public:
 									initial_debt_edit->setId("initial_debt_edit");
 									initial_debt_edit->setStyleClass(Wt::WString::fromUTF8("form-control form-control"));
 									initial_debt_edit->setInline(1);
-									initial_debt_edit->setEmptyText(Wt::WString::fromUTF8("900,3457"));
+									initial_debt_edit->setEmptyText(Wt::WString::fromUTF8("-"));
 								}
 								month_credit_text = new Wt::WText(account_state_container);
 								month_credit_text->setId("month_credit_text");
@@ -857,7 +861,7 @@ public:
 									month_credit_edit->setId("month_credit_edit");
 									month_credit_edit->setStyleClass(Wt::WString::fromUTF8("form-control form-control"));
 									month_credit_edit->setInline(1);
-									month_credit_edit->setEmptyText(Wt::WString::fromUTF8("319,2359"));
+									month_credit_edit->setEmptyText(Wt::WString::fromUTF8("-"));
 								}
 								debt_text = new Wt::WText(account_state_container);
 								debt_text->setId("debt_text");
@@ -875,7 +879,7 @@ public:
 									debt_edit->setId("debt_edit");
 									debt_edit->setStyleClass(Wt::WString::fromUTF8("form-control form-control"));
 									debt_edit->setInline(1);
-									debt_edit->setEmptyText(Wt::WString::fromUTF8("319,3657"));
+									debt_edit->setEmptyText(Wt::WString::fromUTF8("-"));
 								}
 								month_paid_text = new Wt::WText(account_state_container);
 								month_paid_text->setId("month_paid_text");
@@ -893,7 +897,7 @@ public:
 									month_paid_edit->setId("month_paid_edit");
 									month_paid_edit->setStyleClass(Wt::WString::fromUTF8("form-control form-control"));
 									month_paid_edit->setInline(1);
-									month_paid_edit->setEmptyText(Wt::WString::fromUTF8("1000,0000"));
+									month_paid_edit->setEmptyText(Wt::WString::fromUTF8("-"));
 								}
 							}
 							total_month_credit_container = new Wt::WContainerWidget(user_account_right_container);

@@ -84,7 +84,8 @@ WtAccounts::WtAccounts(const Wt::WEnvironment& env) : Wt::WApplication(env), ui(
     ui->save_close_button_report_edit->clicked().connect(boost::bind(&WtAccounts::Configure_edited_report_data_Report, this, "save"));
 
     //fast creat report
-    ui->new_report_button->clicked().connect(boost::bind(&WtAccounts::p_account_operation_create_Report, this, "fast"));
+    ui->new_report_button->clicked().connect(boost::bind(&WtAccounts::p_account_operation_create_Report, this, "fast",""));
+   //send mail to users
 
 
     //if tabs closed
@@ -115,24 +116,35 @@ MYSQL_ROW row;
 MYSQL_RES *add_res;
 MYSQL_ROW add_row;
 
+//mysq variables for mail
+MYSQL_RES *res_mail;
+MYSQL_ROW row_mail;
 
 // mysql connections settings
-//const char *server="52.8.83.48";
-//const char *user="007";
-//const char *password="Yeshimbetov^Karakalpak8";
-//const char *database="account_database";
-//int query_state;
-//std::string mysql_query_str = "";
-
-
-
-//////// mysql connections settings
-const char *server="localhost";
-const char *user="root";
-const char *password="admin";
+const char *server="52.8.83.48";
+const char *user="007";
+const char *password="Yeshimbetov^Karakalpak8";
 const char *database="account_database";
 int query_state;
 std::string mysql_query_str = "";
+
+
+///FOR mail
+static const int CHARS= 76;     //Sending 54 chararcters at a time with \r , \n and \0 it becomes 57
+static const int ADD_SIZE= 7;   // ADD_SIZE for TO,FROM,SUBJECT,CONTENT-TYPE,CONTENT-TRANSFER-ENCODING,CONETNT-DISPOSITION and \r\n
+static const int SEND_BUF_SIZE= 54;
+static char (*fileBuf)[CHARS] = NULL;
+static const char cb64[]="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+//end mail
+
+
+//////// mysql connections settings
+//const char *server="localhost";
+//const char *user="root";
+//const char *password="admin";
+//const char *database="account_database";
+//int query_state;
+//std::string mysql_query_str = "";
 
 // table variable for update data in table
 Wt::WTable *ip_address_table;
@@ -280,306 +292,491 @@ extern void WtAccounts::checkIndex_TAB_close(int closedTABindex)
 
 
 }
+//
+//extern void WtAccounts::edit_subscriber_load_data()
+//{
+//
+//
+//	ui->edit_user_tab_mi->setHidden(false);
+//	//ui->main_tabs->setTabEnabled(0, 1);
+//	ui->main_tabs->setCurrentIndex(2);
+//
+//	try{
+//	mysql_init(&mysql);
+//	conn=mysql_real_connect(&mysql, server, user, password, database, 0, 0, 0);
+//	if(conn==NULL)
+//	{
+//	    std::cout<<mysql_error(&mysql)<<std::endl<<std::endl;
+//	}
+//	mysql_query(&mysql,"SET NAMES 'UTF8'");
+//	if(conn==NULL)
+//	{
+//	    std::cout<<mysql_error(&mysql)<<std::endl<<std::endl;
+//	}
+//
+//
+///*
+//// get main subscriber info and write in mysql table
+//	//group_id = "1";
+//	//Wt::WString temp =ui->user_full_name_edit->text().toUTF8();
+//	full_name = ui->user_full_name_edit->text().toUTF8();
+//	//full_name = boost::locale::conv::utf_to_utf<std::string>(ui->user_full_name_edit->text());
+//	subscriber_type = ui->user_type_combo_box->currentText().toUTF8();
+//	account_number = boost::lexical_cast<std::string>(ui->account_number_edit->text());
+//	user_login = ui->user_login_edit->text().toUTF8();
+//	user_password = ui->user_pass_edit->text().toUTF8();
+//	tariff_plan = ui->tariff_plan_edit->text().toUTF8();
+//	user_email = boost::lexical_cast<std::string>(ui->user_email_edit->text());
+//
+//	if (ui->user_include_date_checkbox->isChecked())
+//	{
+//		ui->user_include_date_date_edit->setFormat("yyyy-MM-dd");
+//		date_since = boost::lexical_cast<std::string>(ui->user_include_date_date_edit->text());
+//	}
+//
+//
+//	if (ui->user_disable_date_checkbox->isChecked())
+//	{
+//		ui->user_disable_date_date_edit->setFormat("yyyy-MM-dd");
+//		date_by = boost::lexical_cast<std::string>(ui->user_disable_date_date_edit->text());
+//	}
+//
+//
+//
+//	std::cout << group_id << std::endl;
+//	std::cout << name << std::endl;
+//	std::cout << surname << std::endl;
+//	std::cout << patronymic << std::endl;
+//	std::cout << full_name << std::endl;
+//	std::cout << subscriber_type << std::endl;
+//	std::cout << account_number << std::endl;
+//	std::cout << user_login << std::endl;
+//	std::cout << user_password << std::endl;
+//	std::cout << date_since << std::endl;
+//	std::cout << date_by << std::endl;
+//	std::cout << tariff_plan << std::endl;
+//	std::cout << user_email << std::endl;
+//
+//
+//
+//*/
+//
+//
+//
+//
+//// get data from mysql tables and load to form elements
+//
+//	std::string subscriber_name = "Джеред Локус Маккуин";
+//
+//
+//	// get all data from mysql tables
+//	std::string mysql_subscriber_all_table_data = "SELECT group_name, subscriber.subscriber_id, "
+//			"subscriber.group_id, name, surname, patronymic, full_name, subscriber_type, "
+//			"account_number, user_login, user_password, date_since, date_by, tariff_plan, "
+//			"user_email, city, district, street, housing, floor, house, apartment, "
+//			"index_number, contact_numbers, personal_code,organization_code, tax_code, "
+//			"account, bank_code, agreement, agreement_date, description, information "
+//			"FROM subscriber_group, subscriber, contacts, requisites, information_fields "
+//			"WHERE subscriber.full_name = '"+subscriber_name+"' AND subscriber_group.group_id = subscriber.group_id "
+//			"AND subscriber.subscriber_id = contacts.subscriber_id AND contacts.subscriber_id = requisites.subscriber_id "
+//			"AND requisites.subscriber_id = information_fields.subscriber_id";
+//
+//	std::cout<<std::endl<<"query_state S1"<<std::endl;
+//	query_state=mysql_query(conn, mysql_subscriber_all_table_data.c_str());
+//	std::cout<<std::endl<<"query_state E1"<<std::endl;
+//   } catch (const std::exception& e) {std::cout <<"query_state1 error -> "<< e.what()<<std::endl;}
+//
+//
+//
+//
+///*
+//	// get subscriber and group data
+//	std::string mysql_subscriber_table_data = "SELECT subscriber_group.group_id,subscriber_group.group_name, subscriber_id, name, "
+//			"surname, patronymic, full_name, subscriber_type, account_number, user_login, "
+//			"user_password, date_since, date_by, tariff_plan, user_email "
+//			"FROM subscriber_group, subscriber "
+//			"WHERE (subscriber.full_name = '"+subscriber_name+"') AND (subscriber.group_id = subscriber_group.group_id)";
+//
+//	query_state=mysql_query(conn, mysql_subscriber_table_data.c_str());
+//
+//*/
+//
+//
+//
+//
+//
+//
+//
+//
+//   try{
+//	// set variables and form elements with data from mysql tables
+//
+//	if(query_state!=0)
+//	{
+//	   std::cout<<mysql_error(conn)<<std::endl<<std::endl;
+//	}
+//	res=mysql_store_result(conn);
+//	std::cout<<"MySQL Values in the amaDB Table.1"<<std::endl<<std::endl;
+//	row=mysql_fetch_row(res);
+//
+//
+//	//std::cout << row[0] << " *****************************************************" << std::endl;
+//	//std::cout << row[1] << " *****************************************************" << std::endl;
+//	//std::cout << row[2] << " *****************************************************" << std::endl;
+//
+//// get all data from mysql tables
+//
+//	// subscriber group info variable
+//	group_name = row[0];
+//
+//	// subscriber contacts data variables
+//	subscriber_id = row[1];
+//	group_id = row[2];
+//	name = row[3];
+//	surname = row[4];
+//	patronymic = row[5];
+//	full_name = row[6];
+//	subscriber_type = row[7];
+//	account_number = row[8];
+//	user_login = row[9];
+//	user_password = row[10];
+//	date_since = row[11];
+//	date_by = row[12];
+//	tariff_plan  = row[13];
+//	user_email = row[14];
+//
+//	// subscriber contacts data variables
+//	city = row[15];
+//	district = row[16];
+//	street = row[17];
+//	housing = row[18];
+//	house_floor = row[19];
+//	house = row[20];
+//	apartment = row[21];
+//	index_number = row[22];
+//	contact_numbers = row[23];
+//
+//	// subscriber requisites data variables
+//	personal_code = row[24];
+//	organization_code = row[25];
+//	tax_code = row[26];
+//	account = row[27];
+//	bank_code = row[28];
+//	agreement = row[29];
+//	agreement_date = row[30];
+//
+//	// subscriber information fields data variables
+//	description = row[31];
+//	information = row[32];
+//
+//	// subscriber and contacts form control data load
+//	ui->user_type_combo_box_edit_user_tab->setValueText(Wt::WString::fromUTF8(subscriber_type));
+//	ui->account_number_edit_edit_user_tab->setText(Wt::WString::fromUTF8(account_number));
+//	ui->user_full_name_edit_edit_user_tab->setText(Wt::WString::fromUTF8(full_name));
+//	ui->user_group_edit_edit_user_tab->setText(Wt::WString::fromUTF8(group_name));
+//	ui->user_login_edit_edit_user_tab->setText(Wt::WString::fromUTF8(user_login));
+//	ui->user_pass_edit_edit_user_tab->setText(Wt::WString::fromUTF8(user_password));
+//
+//	if(date_since == "" || date_since == "0000-00-00")
+//	{
+//		ui->user_include_date_checkbox_edit_user_tab->setChecked(true);
+//		ui->user_include_date_date_edit_edit_user_tab->setText("");
+//	}
+//	else
+//	{
+//		ui->user_include_date_checkbox_edit_user_tab->setChecked(true);
+//		ui->user_include_date_date_edit_edit_user_tab->setFormat("yyyy-MM-dd");
+//		ui->user_include_date_date_edit_edit_user_tab->setText(Wt::WString::fromUTF8(date_since));
+//	}
+//
+//	if(date_by == "" || date_by == "0000-00-00")
+//	{
+//		ui->user_disable_date_checkbox_edit_user_tab->setChecked(true);
+//		ui->user_disable_date_date_edit_edit_user_tab->setText("");
+//	}
+//	else
+//	{
+//		ui->user_disable_date_checkbox_edit_user_tab->setChecked(true);
+//		ui->user_disable_date_date_edit_edit_user_tab->setFormat("yyyy-MM-dd");
+//		ui->user_disable_date_date_edit_edit_user_tab->setText(Wt::WString::fromUTF8(date_by));
+//	}
+//
+//	ui->tariff_plan_edit_edit_user_tab->setText(Wt::WString::fromUTF8(tariff_plan));
+//	ui->user_address_text_area_edit_user_tab->setText(Wt::WString::fromUTF8(city+ "\n" + district+ "\n" +
+//			street+ "\n" + housing+ "\n" + house_floor+ "\n" +
+//			house+ "\n" + apartment+ "\n" + index_number));
+//	ui->user_email_edit_edit_user_tab->setText(Wt::WString::fromUTF8(user_email));
+//	ui->contact_number_edit_edit_user_tab->setText(Wt::WString::fromUTF8(contact_numbers));
+//
+//	// requisite form control; load data
+//	ui->personal_code_edit_edit_user_tab->setValueText(Wt::WString::fromUTF8(personal_code));
+//	ui->organization_code_edit_edit_user_tab->setText(Wt::WString::fromUTF8(organization_code));
+//	ui->tax_code_edit_edit_user_tab->setText(Wt::WString::fromUTF8(tax_code));
+//	ui->requisite_account_edit_edit_user_tab->setText(Wt::WString::fromUTF8(account));
+//	ui->bank_code_edit_edit_user_tab->setText(Wt::WString::fromUTF8(bank_code));
+//	ui->agreement_edit_edit_user_tab->setText(Wt::WString::fromUTF8(agreement));
+//
+//	if(agreement_date == "" || agreement_date == "0000-00-00")
+//	{
+//		ui->agreement_checkbox_edit_user_tab->setChecked(true);
+//		ui->agreement_date_edit_edit_user_tab->setText("");
+//	}
+//	else
+//	{
+//		ui->agreement_checkbox_edit_user_tab->setChecked(true);
+//		ui->agreement_date_edit_edit_user_tab->setFormat("yyyy-MM-dd");
+//		ui->agreement_date_edit_edit_user_tab->setText(Wt::WString::fromUTF8(agreement_date));
+//	}
+//
+//	// information fields form control load data
+//	ui->description_text_area_edit_user_tab->setText(Wt::WString::fromUTF8(description));
+//	ui->information_text_area_edit_user_tab->setText(Wt::WString::fromUTF8(information));
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//// clear all data variables
+//
+//	// subscriber group info variable
+//	group_name = "";
+//
+//	// subscriber contacts data variables
+//	subscriber_id = "";
+//	group_id = "";
+//	name = "";
+//	surname = "";
+//	patronymic = "";
+//	full_name = "";
+//	subscriber_type = "";
+//	account_number = "";
+//	user_login = "";
+//	user_password = "";
+//	date_since = "";
+//	date_by = "";
+//	tariff_plan  = "";
+//	user_email = "";
+//
+//	// subscriber contacts data variables
+//	city = "";
+//	district = "";
+//	street = "";
+//	housing = "";
+//	house_floor = "";
+//	house = "";
+//	apartment = "";
+//	index_number = "";
+//	contact_numbers = "";
+//
+//	// subscriber requisites data variables
+//	personal_code = "";
+//	organization_code = "";
+//	tax_code = "";
+//	account = "";
+//	bank_code = "";
+//	agreement = "";
+//	agreement_date = "";
+//
+//	// subscriber information fields data variables
+//	description = "";
+//	information = "";
+//
+//	mysql_free_result(res);
+//	mysql_close(conn);
+//   } catch (const std::exception& e) {std::cout <<"query_stat23 error -> "<< e.what()<<std::endl;}
+//}
 
-extern void WtAccounts::edit_subscriber_load_data()
+//mail func
+
+
+
+
+
+void encodeblock(unsigned char in[3], unsigned char out[4], int len)
 {
-
-
-	ui->edit_user_tab_mi->setHidden(false);
-	//ui->main_tabs->setTabEnabled(0, 1);
-	ui->main_tabs->setCurrentIndex(2);
-
-	try{
-	mysql_init(&mysql);
-	conn=mysql_real_connect(&mysql, server, user, password, database, 0, 0, 0);
-	if(conn==NULL)
-	{
-	    std::cout<<mysql_error(&mysql)<<std::endl<<std::endl;
-	}
-	mysql_query(&mysql,"SET NAMES 'UTF8'");
-	if(conn==NULL)
-	{
-	    std::cout<<mysql_error(&mysql)<<std::endl<<std::endl;
-	}
-
-
-/*
-// get main subscriber info and write in mysql table
-	//group_id = "1";
-	//Wt::WString temp =ui->user_full_name_edit->text().toUTF8();
-	full_name = ui->user_full_name_edit->text().toUTF8();
-	//full_name = boost::locale::conv::utf_to_utf<std::string>(ui->user_full_name_edit->text());
-	subscriber_type = ui->user_type_combo_box->currentText().toUTF8();
-	account_number = boost::lexical_cast<std::string>(ui->account_number_edit->text());
-	user_login = ui->user_login_edit->text().toUTF8();
-	user_password = ui->user_pass_edit->text().toUTF8();
-	tariff_plan = ui->tariff_plan_edit->text().toUTF8();
-	user_email = boost::lexical_cast<std::string>(ui->user_email_edit->text());
-
-	if (ui->user_include_date_checkbox->isChecked())
-	{
-		ui->user_include_date_date_edit->setFormat("yyyy-MM-dd");
-		date_since = boost::lexical_cast<std::string>(ui->user_include_date_date_edit->text());
-	}
-
-
-	if (ui->user_disable_date_checkbox->isChecked())
-	{
-		ui->user_disable_date_date_edit->setFormat("yyyy-MM-dd");
-		date_by = boost::lexical_cast<std::string>(ui->user_disable_date_date_edit->text());
-	}
-
-
-
-	std::cout << group_id << std::endl;
-	std::cout << name << std::endl;
-	std::cout << surname << std::endl;
-	std::cout << patronymic << std::endl;
-	std::cout << full_name << std::endl;
-	std::cout << subscriber_type << std::endl;
-	std::cout << account_number << std::endl;
-	std::cout << user_login << std::endl;
-	std::cout << user_password << std::endl;
-	std::cout << date_since << std::endl;
-	std::cout << date_by << std::endl;
-	std::cout << tariff_plan << std::endl;
-	std::cout << user_email << std::endl;
-
-
-
-*/
-
-
-
-
-// get data from mysql tables and load to form elements
-
-	std::string subscriber_name = "Джеред Локус Маккуин";
-
-
-	// get all data from mysql tables
-	std::string mysql_subscriber_all_table_data = "SELECT group_name, subscriber.subscriber_id, "
-			"subscriber.group_id, name, surname, patronymic, full_name, subscriber_type, "
-			"account_number, user_login, user_password, date_since, date_by, tariff_plan, "
-			"user_email, city, district, street, housing, floor, house, apartment, "
-			"index_number, contact_numbers, personal_code,organization_code, tax_code, "
-			"account, bank_code, agreement, agreement_date, description, information "
-			"FROM subscriber_group, subscriber, contacts, requisites, information_fields "
-			"WHERE subscriber.full_name = '"+subscriber_name+"' AND subscriber_group.group_id = subscriber.group_id "
-			"AND subscriber.subscriber_id = contacts.subscriber_id AND contacts.subscriber_id = requisites.subscriber_id "
-			"AND requisites.subscriber_id = information_fields.subscriber_id";
-
-	std::cout<<std::endl<<"query_state S1"<<std::endl;
-	query_state=mysql_query(conn, mysql_subscriber_all_table_data.c_str());
-	std::cout<<std::endl<<"query_state E1"<<std::endl;
-   } catch (const std::exception& e) {std::cout <<"query_state1 error -> "<< e.what()<<std::endl;}
-
-
-
-
-/*
-	// get subscriber and group data
-	std::string mysql_subscriber_table_data = "SELECT subscriber_group.group_id,subscriber_group.group_name, subscriber_id, name, "
-			"surname, patronymic, full_name, subscriber_type, account_number, user_login, "
-			"user_password, date_since, date_by, tariff_plan, user_email "
-			"FROM subscriber_group, subscriber "
-			"WHERE (subscriber.full_name = '"+subscriber_name+"') AND (subscriber.group_id = subscriber_group.group_id)";
-
-	query_state=mysql_query(conn, mysql_subscriber_table_data.c_str());
-
-*/
-
-
-
-
-
-
-
-
-
-	// set variables and form elements with data from mysql tables
-
-	if(query_state!=0)
-	{
-	   std::cout<<mysql_error(conn)<<std::endl<<std::endl;
-	}
-	res=mysql_store_result(conn);
-	std::cout<<"MySQL Values in the amaDB Table."<<std::endl<<std::endl;
-	row=mysql_fetch_row(res);
-
-
-	//std::cout << row[0] << " *****************************************************" << std::endl;
-	//std::cout << row[1] << " *****************************************************" << std::endl;
-	//std::cout << row[2] << " *****************************************************" << std::endl;
-
-// get all data from mysql tables
-
-	// subscriber group info variable
-	group_name = row[0];
-
-	// subscriber contacts data variables
-	subscriber_id = row[1];
-	group_id = row[2];
-	name = row[3];
-	surname = row[4];
-	patronymic = row[5];
-	full_name = row[6];
-	subscriber_type = row[7];
-	account_number = row[8];
-	user_login = row[9];
-	user_password = row[10];
-	date_since = row[11];
-	date_by = row[12];
-	tariff_plan  = row[13];
-	user_email = row[14];
-
-	// subscriber contacts data variables
-	city = row[15];
-	district = row[16];
-	street = row[17];
-	housing = row[18];
-	house_floor = row[19];
-	house = row[20];
-	apartment = row[21];
-	index_number = row[22];
-	contact_numbers = row[23];
-
-	// subscriber requisites data variables
-	personal_code = row[24];
-	organization_code = row[25];
-	tax_code = row[26];
-	account = row[27];
-	bank_code = row[28];
-	agreement = row[29];
-	agreement_date = row[30];
-
-	// subscriber information fields data variables
-	description = row[31];
-	information = row[32];
-
-	// subscriber and contacts form control data load
-	ui->user_type_combo_box_edit_user_tab->setValueText(Wt::WString::fromUTF8(subscriber_type));
-	ui->account_number_edit_edit_user_tab->setText(Wt::WString::fromUTF8(account_number));
-	ui->user_full_name_edit_edit_user_tab->setText(Wt::WString::fromUTF8(full_name));
-	ui->user_group_edit_edit_user_tab->setText(Wt::WString::fromUTF8(group_name));
-	ui->user_login_edit_edit_user_tab->setText(Wt::WString::fromUTF8(user_login));
-	ui->user_pass_edit_edit_user_tab->setText(Wt::WString::fromUTF8(user_password));
-
-	if(date_since == "" || date_since == "0000-00-00")
-	{
-		ui->user_include_date_checkbox_edit_user_tab->setChecked(true);
-		ui->user_include_date_date_edit_edit_user_tab->setText("");
-	}
-	else
-	{
-		ui->user_include_date_checkbox_edit_user_tab->setChecked(true);
-		ui->user_include_date_date_edit_edit_user_tab->setFormat("yyyy-MM-dd");
-		ui->user_include_date_date_edit_edit_user_tab->setText(Wt::WString::fromUTF8(date_since));
-	}
-
-	if(date_by == "" || date_by == "0000-00-00")
-	{
-		ui->user_disable_date_checkbox_edit_user_tab->setChecked(true);
-		ui->user_disable_date_date_edit_edit_user_tab->setText("");
-	}
-	else
-	{
-		ui->user_disable_date_checkbox_edit_user_tab->setChecked(true);
-		ui->user_disable_date_date_edit_edit_user_tab->setFormat("yyyy-MM-dd");
-		ui->user_disable_date_date_edit_edit_user_tab->setText(Wt::WString::fromUTF8(date_by));
-	}
-
-	ui->tariff_plan_edit_edit_user_tab->setText(Wt::WString::fromUTF8(tariff_plan));
-	ui->user_address_text_area_edit_user_tab->setText(Wt::WString::fromUTF8(city+ "\n" + district+ "\n" +
-			street+ "\n" + housing+ "\n" + house_floor+ "\n" +
-			house+ "\n" + apartment+ "\n" + index_number));
-	ui->user_email_edit_edit_user_tab->setText(Wt::WString::fromUTF8(user_email));
-	ui->contact_number_edit_edit_user_tab->setText(Wt::WString::fromUTF8(contact_numbers));
-
-	// requisite form control; load data
-	ui->personal_code_edit_edit_user_tab->setValueText(Wt::WString::fromUTF8(personal_code));
-	ui->organization_code_edit_edit_user_tab->setText(Wt::WString::fromUTF8(organization_code));
-	ui->tax_code_edit_edit_user_tab->setText(Wt::WString::fromUTF8(tax_code));
-	ui->requisite_account_edit_edit_user_tab->setText(Wt::WString::fromUTF8(account));
-	ui->bank_code_edit_edit_user_tab->setText(Wt::WString::fromUTF8(bank_code));
-	ui->agreement_edit_edit_user_tab->setText(Wt::WString::fromUTF8(agreement));
-
-	if(agreement_date == "" || agreement_date == "0000-00-00")
-	{
-		ui->agreement_checkbox_edit_user_tab->setChecked(true);
-		ui->agreement_date_edit_edit_user_tab->setText("");
-	}
-	else
-	{
-		ui->agreement_checkbox_edit_user_tab->setChecked(true);
-		ui->agreement_date_edit_edit_user_tab->setFormat("yyyy-MM-dd");
-		ui->agreement_date_edit_edit_user_tab->setText(Wt::WString::fromUTF8(agreement_date));
-	}
-
-	// information fields form control load data
-	ui->description_text_area_edit_user_tab->setText(Wt::WString::fromUTF8(description));
-	ui->information_text_area_edit_user_tab->setText(Wt::WString::fromUTF8(information));
-
-
-
-
-
-
-
-
-
-
-// clear all data variables
-
-	// subscriber group info variable
-	group_name = "";
-
-	// subscriber contacts data variables
-	subscriber_id = "";
-	group_id = "";
-	name = "";
-	surname = "";
-	patronymic = "";
-	full_name = "";
-	subscriber_type = "";
-	account_number = "";
-	user_login = "";
-	user_password = "";
-	date_since = "";
-	date_by = "";
-	tariff_plan  = "";
-	user_email = "";
-
-	// subscriber contacts data variables
-	city = "";
-	district = "";
-	street = "";
-	housing = "";
-	house_floor = "";
-	house = "";
-	apartment = "";
-	index_number = "";
-	contact_numbers = "";
-
-	// subscriber requisites data variables
-	personal_code = "";
-	organization_code = "";
-	tax_code = "";
-	account = "";
-	bank_code = "";
-	agreement = "";
-	agreement_date = "";
-
-	// subscriber information fields data variables
-	description = "";
-	information = "";
-
-	mysql_free_result(res);
-	mysql_close(conn);
-
+    out[0] = cb64[ in[0] >> 2 ];
+    out[1] = cb64[ ((in[0] & 0x03) << 4) | ((in[1] & 0xf0) >> 4) ];
+    out[2] = (unsigned char) (len > 1 ? cb64[ ((in[1] & 0x0f) << 2) | ((in[2] & 0xc0) >> 6) ] : '=');
+    out[3] = (unsigned char) (len > 2 ? cb64[ in[2] & 0x3f ] : '=');
+}
+
+void encode(FILE *infile, unsigned char *output_buf, int rowcount/*For Percent*/)
+{
+    unsigned char in[3], out[4];
+        int i, len;
+        *output_buf = 0;
+
+    while(!feof(infile)) {
+        len = 0;
+        for(i = 0; i < 3; i++) {
+            in[i] = (unsigned char) getc(infile);
+            if(!feof(infile) ) {
+                len++;
+            }
+            else {
+                in[i] = 0;
+            }
+        }
+        if(len) {
+            encodeblock(in, out, len);
+            strncat((char*)output_buf, (char*)out, 4);
+        }
+        }
 }
 
 
+struct fileBuf_upload_status
+{
+  int lines_read;
+};
+
+size_t read_file(std::string FROM, std::string TO, std::string FILENAME, std::string FILEPATH)
+{
+        FILE* hFile=NULL;
+        size_t fileSize(0),len(0),buffer_size(0);
+
+        //Open the file and make sure it exsits
+        hFile = fopen(FILEPATH.c_str(),"rb");
+        if(!hFile) {
+                std::cout << "File not found!!!" << std::endl;
+                exit (EXIT_FAILURE);
+        }
+
+        //Get filesize
+        fseek(hFile,0,SEEK_END);
+        fileSize = ftell(hFile);
+        fseek(hFile,0,SEEK_SET);
+
+        //Calculate the number of rows in Base64 encoded string
+        //also calculate the size of the new char to be created
+        //for the base64 encode string
+        int no_of_rows = fileSize/SEND_BUF_SIZE + 1;
+        int charsize = (no_of_rows*72)+(no_of_rows*2);
+
+        //Base64 encode image and create encoded_buf string
+        unsigned char* b64encode = new unsigned char[charsize];
+        *b64encode = 0;
+        encode(hFile, b64encode, no_of_rows /*For Percent*/);
+        std::string encoded_buf = (char*)b64encode;
+
+        // char TOO[] =  TO.c_str();
+
+        //Create structure of email to be sent
+        fileBuf = new char[ADD_SIZE + no_of_rows][CHARS];  //ADD_SIZE for TO,FROM,SUBJECT,CONTENT-TYPE,CONTENT-TRANSFER-
+                                                           //ENCODING,CONETNT-DISPOSITION and \r\n
+        std::string TO_str = "To: " + TO + "\r\n";
+        strcpy(fileBuf[len++], TO_str.c_str());
+        buffer_size += strlen(fileBuf[len-1]);
+
+        std::string FROM_str = "From: " + FROM + "\r\n";
+        strcpy(fileBuf[len++], FROM_str.c_str());
+        buffer_size += strlen(fileBuf[len-1]);
+
+        std::string Subject_str = "filename: " + FILEPATH + "\r\n";
+        strcpy(fileBuf[len++], Subject_str.c_str());
+        buffer_size += strlen(fileBuf[len-1]);
+
+        std::string FILENAME_CT_str = "Content-Type: application/x-msdownload; name=\"" + FILENAME + "\"\r\n";
+        strcpy(fileBuf[len++], FILENAME_CT_str.c_str());
+        buffer_size += strlen(fileBuf[len-1]);
+
+        strcpy(fileBuf[len++],"Content-Transfer-Encoding: base64\r\n");
+        buffer_size += strlen(fileBuf[len-1]);
+
+        std::string FILEPATH_CD_str = "Content-Disposition: attachment; filename=\"" + FILENAME + "\"\r\n";
+        strcpy(fileBuf[len++],FILEPATH_CD_str.c_str());
+        buffer_size += strlen(fileBuf[len-1]);
+
+        strcpy(fileBuf[len++],"\r\n");
+        buffer_size += strlen(fileBuf[len-1]);
+
+        //This part attaches the Base64 encoded string and
+        //sets the Base64 linesize to 72 characters + \r\n
+        int pos = 0;
+        std::string sub_encoded_buf;
+        for(int i = 0; i <= no_of_rows-1; i++)
+        {
+                sub_encoded_buf = encoded_buf.substr(pos*72,72);  //Reads 72 characters at a time
+                sub_encoded_buf += "\r\n";                        //and appends \r\n at the end
+                strcpy(fileBuf[len++], sub_encoded_buf.c_str());  //copy the 72 characters & \r\n to email
+                buffer_size += sub_encoded_buf.size();            //now increase the buffer_size
+                pos++;                                            //finally increase pos by 1
+        }
+
+
+        delete[] b64encode;
+        return buffer_size;
+}
+
+
+static size_t fileBuf_source(void *ptr, size_t size, size_t nmemb, void *userp)
+{
+        struct fileBuf_upload_status *upload_ctx = (struct fileBuf_upload_status *)userp;
+        const char *fdata;
+
+        if((size == 0) || (nmemb == 0) || ((size*nmemb) < 1))
+        {
+                return 0;
+        }
+
+        fdata = fileBuf[upload_ctx->lines_read];
+
+        if(strcmp(fdata,""))
+        {
+                size_t len = strlen(fdata);
+                memcpy(ptr, fdata, len);
+                upload_ctx->lines_read++;
+                return len;
+        }
+        return 0;
+}
+
+
+extern size_t WtAccounts::send_email(std::string FROM, std::string TO, std::string FILENAME, std::string FILEPATH)
+{
+	  CURL *curl;
+	  CURLcode res = CURLE_OK;
+	  struct curl_slist *recipients = NULL;
+	  struct fileBuf_upload_status file_upload_ctx;
+	  size_t file_size(0);
+
+	  file_upload_ctx.lines_read = 0;
+
+	  curl = curl_easy_init();
+	  file_size = read_file(FROM, TO, FILENAME, FILEPATH);
+	  if(curl)
+	  {
+	    curl_easy_setopt(curl, CURLOPT_USERNAME, "esep@automation-trade.com");
+	    curl_easy_setopt(curl, CURLOPT_PASSWORD, "baywatch_ser1");
+	    curl_easy_setopt(curl, CURLOPT_URL, "smtp://smtp.gmail.com:587"); // for google (gmail): smtp://smtp.gmail.com:587
+	    curl_easy_setopt(curl, CURLOPT_USE_SSL, (long)CURLUSESSL_ALL);
+	    //curl_easy_setopt(curl, CURLOPT_CAINFO, "cacert.pem");
+	    curl_easy_setopt(curl, CURLOPT_MAIL_FROM, FROM.c_str());
+	    recipients = curl_slist_append(recipients, TO.c_str());
+	    curl_easy_setopt(curl, CURLOPT_MAIL_RCPT, recipients);
+	    curl_easy_setopt(curl, CURLOPT_INFILESIZE, file_size);
+	    curl_easy_setopt(curl, CURLOPT_READFUNCTION, fileBuf_source);
+	    curl_easy_setopt(curl, CURLOPT_READDATA, &file_upload_ctx);
+	    curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
+	    curl_easy_setopt(curl, CURLOPT_VERBOSE, 0); //Dont display Curl Connection data Change 1L to 0
+
+	    res = curl_easy_perform(curl);
+
+	    if(res != CURLE_OK)
+	      fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
+	    curl_slist_free_all(recipients);
+	    curl_easy_cleanup(curl);
+	  }
+	  delete[] fileBuf;
+
+	  return (int)res;
+}
+//end mail func
 
 //PDF func
 //Below is the "Rendering HTML to PDF" code from the widget gallery, with the new container widget for a target.
@@ -649,9 +846,10 @@ public:
       _target = target;
     }
 */
+
   virtual void handleRequest(const Wt::Http::Request& request, Wt::Http::Response& response)
   {
-    response.setMimeType("application/pdf");
+    //response.setMimeType("application/pdf");
 
     HPDF_Doc pdf = HPDF_New(error_handler, 0);
 
@@ -661,16 +859,23 @@ public:
 
     renderReport(pdf);
     int ddsfd;
+
+
     HPDF_SaveToStream(pdf);
+
+
     unsigned int size = HPDF_GetStreamSize(pdf);
     HPDF_BYTE *buf = new HPDF_BYTE[size];
     HPDF_ReadFromStream (pdf, buf, &size);
-    HPDF_Free(pdf);
     response.out().write((char*)buf, size);
     delete[] buf;
+
+
+    HPDF_Free(pdf);
+
   }
 
-private:
+public:
 
   Wt::WContainerWidget* _target;
 
@@ -775,7 +980,14 @@ private:
  std::cout<<std::endl<<"WAIT"<<std::endl;
   //HPDF_Page_EndText (page);
   //OUTput in file to test HTML
+   if (state==2){
 
+    nate+=".pdf";
+    std::string patch_to_save_pdf= "/home/judge/Documents/";
+    patch_to_save_pdf+=nate;
+    const char *nametosave=patch_to_save_pdf.c_str();
+    HPDF_SaveToFile (pdf, nametosave);
+    std::cout<<"save pdf to file "<<std::endl;}
   //renderer.render(html);
   //HPDF_Page_BeginText (page);
   //HPDF_Page_MoveTextPos (page, 10, 10);
@@ -785,8 +997,26 @@ private:
 
 //PDF func END
 
+//creat pdf
 
+extern void WtAccounts::creat_pdf_monthly(std::string name_ab,std::string text)
+{
 
+	HPDF_Doc pdf = HPDF_New(error_handler, 0);
+	HPDF_UseUTFEncodings(pdf);
+	HPDF_Page page = HPDF_AddPage(pdf);
+	HPDF_Page_SetSize(page, HPDF_PAGE_SIZE_A4, HPDF_PAGE_PORTRAIT);
+	Wt::Render::WPdfRenderer renderer(pdf, page);
+	renderer.render(Wt::WString::fromUTF8(text));
+	//name_ab=name_ab.substr(0,2);
+	name_ab+=".pdf";
+	std::string patch_to_save_pdf= "/home/judge/Documents/";
+	patch_to_save_pdf+=name_ab;
+	const char *nametosave=patch_to_save_pdf.c_str();
+	HPDF_SaveToFile (pdf, nametosave);
+	std::cout<<"save pdf to file new fucn"<<std::endl;
+
+}
 
 
 
@@ -858,7 +1088,7 @@ extern void WtAccounts::subscriber_show_operation_tab(std::string operation_name
 		}
 		res=mysql_store_result(conn);
 		std::string mysql_get_subscriber_fullName = "";
-		std::cout<<"MySQL Values in the amaDB Table."<<std::endl<<std::endl;
+		std::cout<<"MySQL Values in the amaDB Table.2"<<std::endl<<std::endl;
 		std::cout<<std::endl<<"query_state E1"<<std::endl;
 		while((row=mysql_fetch_row(res))!=NULL)
 		{
@@ -1034,7 +1264,7 @@ extern void WtAccounts::subscriber_show_operation_tab(std::string operation_name
 			   std::cout<<mysql_error(conn)<<std::endl<<std::endl;
 			}
 			res=mysql_store_result(conn);
-			std::cout<<"MySQL Values in the amaDB Table."<<std::endl<<std::endl;
+			std::cout<<"MySQL Values in the amaDB Table.3"<<std::endl<<std::endl;
 			row=mysql_fetch_row(res);
 			std::cout<<std::endl<<"query_state E4"<<std::endl;
 
@@ -1281,6 +1511,7 @@ extern void WtAccounts::subscriber_show_operation_tab(std::string operation_name
 // dialog window for enter subscriber full name
 extern void WtAccounts::subscriber_name_dialog(std::string operation_name)
 {
+	try{
     Wt::WDialog *dialog = new Wt::WDialog(Wt::WString::fromUTF8("Абонент"));
 
     dialog->resize(500, 350);
@@ -1383,7 +1614,7 @@ extern void WtAccounts::subscriber_name_dialog(std::string operation_name)
      */
     dialog->finished().connect(std::bind([=] () {
 	if (dialog->result() == Wt::WDialog::Accepted)
-	{
+	{   try{
 		if (operation_name == "create")
 		{
 			name = name_edit->text().toUTF8();
@@ -1396,13 +1627,14 @@ extern void WtAccounts::subscriber_name_dialog(std::string operation_name)
 			if (surname_edit->text() != "") surname_edit_mode = surname_edit->text().toUTF8();
 			if (family_name_edit->text() != "") patronymic_edit_mode = family_name_edit->text().toUTF8();
 			ui->user_full_name_edit_edit_user_tab->setText(Wt::WString::fromUTF8(surname_edit_mode) + " " + Wt::WString::fromUTF8(name_edit_mode) + " " + Wt::WString::fromUTF8(patronymic_edit_mode));
-		}
+		}} catch (const std::exception& e) {std::cout <<"operator creat 2 -> "<< e.what()<<std::endl;}
 	}
 
 	delete dialog;
     }));
 
     dialog->show();
+} catch (const std::exception& e) {std::cout <<"Operator creat 1 -> "<< e.what()<<std::endl;}
 }
 
 
@@ -1411,7 +1643,7 @@ extern void WtAccounts::subscriber_name_dialog(std::string operation_name)
 
 // show dialog window where we can chose subscriber group
 extern void WtAccounts::subscriber_group_dialog(std::string operation_name)
-{
+{   try{
 	mysql_init(&mysql);
 	conn=mysql_real_connect(&mysql, server, user, password, database, 0, 0, 0);
 	if(conn==NULL)
@@ -1445,7 +1677,7 @@ extern void WtAccounts::subscriber_group_dialog(std::string operation_name)
 	   std::cout<<mysql_error(conn)<<std::endl<<std::endl;
 	}
 	res=mysql_store_result(conn);
-	std::cout<<"MySQL Values in the amaDB Table."<<std::endl<<std::endl;
+	std::cout<<"MySQL Values in the amaDB Table.4"<<std::endl<<std::endl;
 	while((row=mysql_fetch_row(res))!=NULL)
 	{
 		tree_node  = new Wt::WTreeTableNode(Wt::WString::fromUTF8(row[1]), 0, tree_root);
@@ -1512,6 +1744,7 @@ extern void WtAccounts::subscriber_group_dialog(std::string operation_name)
 
 
     dialog->show();
+} catch (const std::exception& e) {std::cout <<"subscriber_group_dialog -> "<< e.what()<<std::endl;}
 }
 
 
@@ -1521,6 +1754,8 @@ extern void WtAccounts::subscriber_group_dialog(std::string operation_name)
 // show dialog window where you create new phone numbers
 extern void WtAccounts::create_phone_number_dialog(std::string operation_name)
 {
+
+	try {
     Wt::WDialog *dialog = new Wt::WDialog(Wt::WString::fromUTF8("Новый телефонный номер"));
 
     dialog->resize(600, 550);
@@ -1807,6 +2042,8 @@ extern void WtAccounts::create_phone_number_dialog(std::string operation_name)
     }));
 
     dialog->show();
+
+	} catch (const std::exception& e) {std::cout <<"create_phone_number_dialog -> "<< e.what()<<std::endl;}
 }
 
 
@@ -1863,7 +2100,7 @@ extern void WtAccounts::delete_phone_number_dialog(std::string operation_name)
 	   std::cout<<mysql_error(conn)<<std::endl<<std::endl;
 	}
 	res=mysql_store_result(conn);
-	std::cout<<"MySQL Values in the amaDB Table."<<std::endl<<std::endl;
+	std::cout<<"MySQL Values in the amaDB Table.5"<<std::endl<<std::endl;
 	while((row=mysql_fetch_row(res))!=NULL)
 	{
 		tree_node  = new Wt::WTreeTableNode(Wt::WString::fromUTF8(row[0]), 0, tree_root);
@@ -2536,7 +2773,7 @@ extern void WtAccounts::delete_ip_address_dialog(std::string operation_name)
 	   std::cout<<mysql_error(conn)<<std::endl<<std::endl;
 	}
 	res=mysql_store_result(conn);
-	std::cout<<"MySQL Values in the amaDB Table."<<std::endl<<std::endl;
+	std::cout<<"MySQL Values in the amaDB Table.6"<<std::endl<<std::endl;
 	while((row=mysql_fetch_row(res))!=NULL)
 	{
 		tree_node  = new Wt::WTreeTableNode(Wt::WString::fromUTF8(row[0]), 0, tree_root);
@@ -2920,7 +3157,7 @@ extern void WtAccounts::subscriber_tariff_plan_dialog(std::string operation_name
 	   std::cout<<mysql_error(conn)<<std::endl<<std::endl;
 	}
 	res=mysql_store_result(conn);
-	std::cout<<"MySQL Values in the amaDB Table."<<std::endl<<std::endl;
+	std::cout<<"MySQL Values in the amaDB Table.7"<<std::endl<<std::endl;
 	while((row=mysql_fetch_row(res))!=NULL)
 	{
 		tree_node  = new Wt::WTreeTableNode(Wt::WString::fromUTF8(row[1]), 0, tree_root);
@@ -3249,7 +3486,7 @@ extern void WtAccounts::add_service_dialog(std::string operation_name)
 	   std::cout<<mysql_error(conn)<<std::endl<<std::endl;
 	}
 	res=mysql_store_result(conn);
-	std::cout<<"MySQL Values in the amaDB Table."<<std::endl<<std::endl;
+	std::cout<<"MySQL Values in the amaDB Table.8"<<std::endl<<std::endl;
 	while((row=mysql_fetch_row(res))!=NULL)
 	{
 		tree_node  = new Wt::WTreeTableNode(Wt::WString::fromUTF8(row[1]), 0, tree_root);
@@ -3628,7 +3865,7 @@ extern void WtAccounts::delete_service_dialog(std::string operation_name)
 	   std::cout<<mysql_error(conn)<<std::endl<<std::endl;
 	}
 	res=mysql_store_result(conn);
-	std::cout<<"MySQL Values in the amaDB Table."<<std::endl<<std::endl;
+	std::cout<<"MySQL Values in the amaDB Table.9"<<std::endl<<std::endl;
 	while((row=mysql_fetch_row(res))!=NULL)
 	{
 		tree_node  = new Wt::WTreeTableNode(Wt::WString::fromUTF8(row[0]), 0, tree_root);
@@ -3932,6 +4169,7 @@ extern void WtAccounts::save_data_and_close_tab(std::string operation_name)
 {
 	if (operation_name == "create")
 	{
+		try {
 		mysql_init(&mysql);
 		conn=mysql_real_connect(&mysql, server, user, password, database, 0, 0, 0);
 		if(conn==NULL)
@@ -3954,10 +4192,10 @@ extern void WtAccounts::save_data_and_close_tab(std::string operation_name)
 			   std::cout<<mysql_error(conn)<<std::endl<<std::endl;
 			}
 			res=mysql_store_result(conn);
-			std::cout<<"MySQL Values in the amaDB Table."<<std::endl<<std::endl;
+			std::cout<<"MySQL Values in the amaDB Table.10"<<std::endl<<std::endl;
 			row=mysql_fetch_row(res);
 			group_id = boost::lexical_cast<std::string>(row[0]);
-
+			mysql_free_result(res);
 
 					mysql_query_str = "UPDATE subscriber_group SET subscribers_number_ingroup = subscribers_number_ingroup + 1 WHERE group_id = '"+group_id+"'";
 					query_state=mysql_query(conn, mysql_query_str.c_str());
@@ -3995,7 +4233,7 @@ extern void WtAccounts::save_data_and_close_tab(std::string operation_name)
 
 
 
-		std::cout << "Adilbek Cool" << "***************************************************" << std::endl;
+		std::cout << "Creat user init" << "***************************************************" << std::endl;
 
 
 
@@ -4063,8 +4301,10 @@ extern void WtAccounts::save_data_and_close_tab(std::string operation_name)
 				"values ('"+subscriber_id+"', '"+city+"', '"+district+"','"+street+"', '"+housing+"','"+house_floor+"', "
 						"'"+house+"','"+apartment+"', '"+index_number+"','"+contact_numbers+"')";
 		query_state=mysql_query(conn, mysql_subscriber_contacts.c_str());
-
-
+		if(query_state!=0)
+				{
+					  std::cout<<mysql_error(conn)<<std::endl<<std::endl;
+				}
 
 
 
@@ -4093,7 +4333,10 @@ extern void WtAccounts::save_data_and_close_tab(std::string operation_name)
 				"values ('"+subscriber_id+"', '"+personal_code+"', '"+organization_code+"', '"+tax_code+"', "
 						"'"+account+"', '"+bank_code+"', '"+agreement+"', '"+agreement_date+"')";
 		query_state=mysql_query(conn, mysql_subscriber_requisites.c_str());
-
+		if(query_state!=0)
+				{
+					  std::cout<<mysql_error(conn)<<std::endl<<std::endl;
+				}
 
 
 		// get subscriber information fields data
@@ -4104,9 +4347,12 @@ extern void WtAccounts::save_data_and_close_tab(std::string operation_name)
 		std::string mysql_subscriber_information_fields = "INSERT INTO information_fields (subscriber_id, description, "
 				"information) values ('"+subscriber_id+"', '"+description+"', '"+information+"')";
 		query_state=mysql_query(conn, mysql_subscriber_information_fields.c_str());
+		if(query_state!=0)
+				{
+					  std::cout<<mysql_error(conn)<<std::endl<<std::endl;
+				}
 
-
-
+		std::cout << "Creat user init END" << "***************************************************" << std::endl;
 	// clear all data variables
 
 		// subscriber group info variable
@@ -4156,10 +4402,13 @@ extern void WtAccounts::save_data_and_close_tab(std::string operation_name)
 		ui->create_user_tab_mi->setHidden(true);
 		ui->main_tabs->setCurrentIndex(0);
 
-		mysql_free_result(res);
+		//mysql_free_result(res);
 		mysql_close(conn);
+
+		} catch (const std::exception& e) {std::cout <<"Creat user main -> "<< e.what()<<std::endl;}
 	} else // operation_name == "create" ############################################################################
 	{
+		try {
 		mysql_init(&mysql);
 		conn=mysql_real_connect(&mysql, server, user, password, database, 0, 0, 0);
 		if(conn==NULL)
@@ -4184,10 +4433,10 @@ extern void WtAccounts::save_data_and_close_tab(std::string operation_name)
 			   std::cout<<mysql_error(conn)<<std::endl<<std::endl;
 			}
 			res=mysql_store_result(conn);
-			std::cout<<"MySQL Values in the amaDB Table."<<std::endl<<std::endl;
+			std::cout<<"MySQL Values in the amaDB Table.11"<<std::endl<<std::endl;
 			row=mysql_fetch_row(res);
 			group_id_edit_mode = boost::lexical_cast<std::string>(row[0]); // get group id for new group name
-
+			mysql_free_result(res);
 			// if subscriber group changed decrease subscribers_number_ingroup in old group and increase in new group
 			if (new_group_name_edit_mode != group_name_edit_mode) {
 				mysql_query_str = "UPDATE subscriber_group SET subscribers_number_ingroup = subscribers_number_ingroup - 1 WHERE group_id = '"+old_group_id_edit_mode+"'";
@@ -4284,7 +4533,10 @@ extern void WtAccounts::save_data_and_close_tab(std::string operation_name)
 						"AND requisites.subscriber_id = information_fields.subscriber_id";
 
 		query_state=mysql_query(conn, mysql_subscriber_update_all_data.c_str());
-
+		if(query_state!=0)
+				{
+					  std::cout<<mysql_error(conn)<<std::endl<<std::endl;
+				}
 
 
 // clear all data variables
@@ -4336,8 +4588,9 @@ extern void WtAccounts::save_data_and_close_tab(std::string operation_name)
 		ui->edit_user_tab_mi->setHidden(true);
 		ui->main_tabs->setCurrentIndex(0);
 
-		mysql_free_result(res);
+		//mysql_free_result(res);
 		mysql_close(conn);
+		} catch (const std::exception& e) {std::cout <<"Edit user main -> "<< e.what()<<std::endl;}
 	}
 
 }
@@ -4783,10 +5036,20 @@ extern void WtAccounts::account_operation_popup_item_binder()
 	} else if (popup_menu_selected_item == "Ввести оплату")
 	{
 		WtAccounts::subscriber_payment_transaction_dialog();
-	} else
+	}
+	else if (popup_menu_selected_item == "Завести первоначальный долг")
+	{
+		WtAccounts::subscriber_initial_debt_dialog();
+	}
+	else if (popup_menu_selected_item == "Разослать квитанции")
+		{
+			WtAccounts::send_mail_to_users();
+		}
+	else
 	{
 		WtAccounts::p_account_operation_CHECK("herdre");
 	}
+
 }
 
 
@@ -4835,7 +5098,7 @@ extern void WtAccounts::subscriber_add_one_time_services_dialog()
 	   std::cout<<mysql_error(conn)<<std::endl<<std::endl;
 	}
 	res=mysql_store_result(conn);
-	std::cout<<"MySQL Values in the amaDB Table."<<std::endl<<std::endl;
+	std::cout<<"MySQL Values in the amaDB Table.12"<<std::endl<<std::endl;
 	while((row=mysql_fetch_row(res))!=NULL)
 	{
 		tree_node  = new Wt::WTreeTableNode(Wt::WString::fromUTF8(row[1]), 0, tree_root);
@@ -5096,6 +5359,190 @@ extern void WtAccounts::subscriber_add_one_time_services_dialog()
 }
 
 
+//initial debpt diablog window
+extern void WtAccounts::subscriber_initial_debt_dialog()
+{
+
+	Wt::WMessageBox *messageBox;
+	Wt::WTreeNode *selected_node; // operator* returns contents of an interator
+	std::set<Wt::WTreeNode* > highlightedRows = ui->user_treeTable->tree()->selectedNodes();
+	if (!highlightedRows.empty() && (subscriber_id_view_mode != ""))
+	{
+
+
+
+
+    Wt::WDialog *dialog = new Wt::WDialog(Wt::WString::fromUTF8("Начальный долг"));
+
+
+
+
+    dialog->resize(400, 250);
+
+
+    // payment quantity label and edit
+    Wt::WLabel *payment_quantity_label = new Wt::WLabel(Wt::WString::fromUTF8("Долг:"),
+    				       dialog->contents());
+    payment_quantity_label->setStyleClass("col-lg-2 col-md-2 top_pad top_mar");
+
+    Wt::WContainerWidget *payment_quantity_edit_container = new Wt::WContainerWidget(dialog->contents());
+    payment_quantity_edit_container->setStyleClass(Wt::WString::fromUTF8("col-md-3 col-lg-3 top_mar"));
+    payment_quantity_edit_container->setHtmlTagName("div");
+
+    Wt::WLineEdit *payment_quantity_edit = new Wt::WLineEdit(payment_quantity_edit_container);
+    payment_quantity_label->setBuddy(payment_quantity_edit);
+
+
+
+    dialog->contents()->addStyleClass("form-group");
+
+
+    Wt::WPushButton *ok = new Wt::WPushButton("OK", dialog->footer());
+    ok->setDefault(true);
+
+
+    Wt::WPushButton *cancel = new Wt::WPushButton("Cancel", dialog->footer());
+    dialog->rejectWhenEscapePressed();
+
+    int subscriber_initial_debt=0;
+
+    mysql_init(&mysql);
+    conn=mysql_real_connect(&mysql, server, user, password, database, 0, 0, 0);
+    if(conn==NULL)
+    {
+    	std::cout<<mysql_error(&mysql)<<std::endl<<std::endl;
+    }
+    mysql_query(&mysql,"SET NAMES 'UTF8'");
+
+
+    std::string  Aready_have_id="0"; //if we already hava data about dept then just get id and update
+    std::string Sum_to_this_mouth = "SELECT transaction_id,quantity FROM account_database.subscriber_transaction where subscriber_id='"+subscriber_id_view_mode+"' and description='Начальный долг'";
+
+    query_state = mysql_query(conn, Sum_to_this_mouth.c_str());
+    if(query_state!=0)
+    {
+    	std::cout<<mysql_error(conn)<<std::endl<<std::endl;
+    }
+    res=mysql_store_result(conn);
+
+    if ((row=mysql_fetch_row(res))!=NULL)
+    {if (row[0]!=NULL){
+    	Aready_have_id=row[0];
+    	subscriber_initial_debt=std::atoi(row[1]);
+       std::cout<<std::endl<<Aready_have_id<<std::endl;
+    	mysql_free_result(res);
+    }}
+    payment_quantity_edit->setText(std::to_string(subscriber_initial_debt));
+    //mysql_close(conn);
+
+
+
+    // Accept the dialog
+    ok->clicked().connect(std::bind([=] () {
+
+	    dialog->accept();
+    }));
+
+
+    // Reject the dialog
+    cancel->clicked().connect(dialog, &Wt::WDialog::reject);
+
+
+    // Process the dialog result.
+    dialog->finished().connect(std::bind([=] () {
+	if (dialog->result() == Wt::WDialog::Accepted)
+	{Wt::WMessageBox *messageBox;
+
+
+          try {
+		  std::string payment_quantity = boost::lexical_cast<std::string>(payment_quantity_edit->text());
+		  std::string mysql_insert_new_payment_transaction="";
+
+		  std::string current_month;
+		  std::string current_year;
+		  //check year
+		  std::string ResulYearCombo="";
+		  current_year=ui->year_combo_box->currentText().toUTF8();
+		  //check month
+		  int ResulMonthCombo_index;
+
+		  std::string check_date_temp="";
+		  ResulMonthCombo_index=ui->month_combo_box->currentIndex()+1;
+		  check_date_temp=current_year+"-"+std::to_string(ResulMonthCombo_index)+"-1";
+
+           if (Aready_have_id=="0"){
+        	   std::string payment_date;
+        	   std::string Sum_to_this_mouth = "SELECT date_since FROM account_database.subscriber where subscriber_id='"+subscriber_id_view_mode+"'";
+
+        	   query_state = mysql_query(conn, Sum_to_this_mouth.c_str());
+        	   if(query_state!=0)
+        	   {
+        		   std::cout<<mysql_error(conn)<<std::endl<<std::endl;
+        	   }
+        	   res=mysql_store_result(conn);
+
+        	   if ((row=mysql_fetch_row(res))!=NULL)
+        	   {   if (row[0]!=NULL){
+        		   payment_date=row[0];}
+        		   mysql_free_result(res);
+        	   }
+
+//007 fix
+
+
+        	   //"'"+payment_date+"'
+        std::cout<<std::endl<<"FIRST  " <<payment_quantity<<"  "<<payment_date<<std::endl;
+		mysql_insert_new_payment_transaction = "INSERT INTO subscriber_transaction (subscriber_id, transaction_type, "
+																"transaction_date, description, quantity)  "
+																"VALUES ('"+subscriber_id_view_mode+"', 'Начисление', "
+																"str_to_date('"+check_date_temp+"', '%Y-%m-%d') , 'Начальный долг', '"+payment_quantity+"')";
+           }
+           else {
+
+
+        	   std::cout<<std::endl<<Aready_have_id<<"  "<<payment_quantity<<std::endl;
+        	   mysql_insert_new_payment_transaction = "UPDATE subscriber_transaction SET quantity='"+payment_quantity+"',transaction_date=str_to_date('"+check_date_temp+"', '%Y-%m-%d')  WHERE transaction_id='"+Aready_have_id+"'";
+
+           }
+			query_state = mysql_query(conn, mysql_insert_new_payment_transaction.c_str());
+			if(query_state!=0)
+			{
+			   std::cout<<mysql_error(conn)<<std::endl<<std::endl;
+			}
+
+
+	mysql_close(conn);
+          } catch (const std::exception& e) {std::cout <<"Add or edit debt -> "<< e.what()<<std::endl;}
+          }
+	delete dialog;
+
+
+
+
+    }));
+
+
+    dialog->show();
+
+
+
+
+
+
+
+
+    } else
+    		{
+    			messageBox = new Wt::WMessageBox(Wt::WString::fromUTF8("Ошибка"), Wt::WString::fromUTF8("Не выбран абонент"), Wt::Information, Wt::Yes | Wt::No);
+    			messageBox->buttonClicked().connect(std::bind([=] () {
+    			delete messageBox;
+    			}));
+
+    			messageBox->show();
+    		}
+
+
+}
 
 
 
@@ -5279,94 +5726,12 @@ extern void WtAccounts::subscriber_payment_transaction_dialog()
 			}
 
 
+			mysql_close(conn);
 
 
 
 
-				std::string Sum_to_this_mouth = "SELECT quantity,transaction_id FROM account_database.subscriber_transaction WHERE subscriber_id='"+subscriber_id_view_mode+"'"
-				"AND  month(transaction_date)=month('"+payment_date+"') AND year(transaction_date)=year('"+payment_date+"') AND transaction_type='Долг'";
-				query_state = mysql_query(conn, Sum_to_this_mouth.c_str());
-
-				if(query_state!=0)
-				{
-					std::cout<<mysql_error(conn)<<std::endl<<std::endl;
-				}
-				res=mysql_store_result(conn);
-
-				if ((row=mysql_fetch_row(res))!=NULL)
-				{
-					chect_mouth_dept=std::atoi(row[0]);
-					std::cout<<chect_mouth_dept<<"quantity1 "<<std::endl;
-
-					chect_mouth_dept-=std::stoi(payment_quantity);
-
-
-					mysql_insert_new_payment_transaction = "UPDATE account_database.subscriber_transaction SET quantity='"+std::to_string(chect_mouth_dept)+"' WHERE transaction_id='"+row[1]+"'";
-					mysql_free_result(res);
-					query_state = mysql_query(conn, mysql_insert_new_payment_transaction.c_str());
-
-
-					if(query_state!=0)
-					{
-						std::cout<<mysql_error(conn)<<std::endl<<std::endl;
-					}
-
-
-
-
-					mysql_close(conn);
-				}
-				else
-				{
-					mysql_free_result(res);
-
-
-
-
-
-
-					Sum_to_this_mouth = "SELECT quantity FROM account_database.subscriber_transaction WHERE subscriber_id='"+subscriber_id_view_mode+"'"
-									"AND  month(transaction_date)=(month('"+payment_date+"'))-1 AND year(transaction_date)=year('"+payment_date+"') AND transaction_type='Долг'";
-									query_state = mysql_query(conn, Sum_to_this_mouth.c_str());
-
-									if(query_state!=0)
-									{
-										std::cout<<mysql_error(conn)<<std::endl<<std::endl;
-									}
-
-									res=mysql_store_result(conn);
-									if ((row=mysql_fetch_row(res))!=NULL)
-									{
-										sum_needTo_pay_thisM+=std::atoi(row[0]);
-										std::cout<<std::stoi(payment_quantity)<<"quantity1 "<<std::endl;
-										sum_needTo_pay_thisM-=std::stoi(payment_quantity);
-										std::cout<<sum_needTo_pay_thisM<<"quantity2 "<<std::endl;
-										mysql_free_result(res);
-									}
-									else {sum_needTo_pay_thisM-=std::stoi(payment_quantity);std::cout<<"Mysql sum3"<<std::endl<<std::endl;}
-
-
-									std::cout<<"Mysql sum2"<<std::endl<<std::endl;
-									mysql_insert_new_payment_transaction = "INSERT INTO subscriber_transaction (subscriber_id, transaction_type, "
-											"transaction_date, description, quantity)  "
-											"VALUES ('"+subscriber_id_view_mode+"', 'Долг', "
-											"'"+payment_date+"', 'Пересчет,прибовляем сумму долга прошлого месяца к стоимости услуг в этом, онимаем оплаченые', '"+std::to_string(sum_needTo_pay_thisM)+"')";
-
-									query_state = mysql_query(conn, mysql_insert_new_payment_transaction.c_str());
-
-
-									if(query_state!=0)
-									{
-										std::cout<<mysql_error(conn)<<std::endl<<std::endl;
-									}
-
-
-
-									mysql_close(conn);
-
-
-				}
-				}else{
+				}else{mysql_close(conn);
 	    			messageBox = new Wt::WMessageBox(Wt::WString::fromUTF8("Ошибка"), Wt::WString::fromUTF8("Некорректный месяц,отсутствуют услуги за которые требуются оплата"), Wt::Information, Wt::Yes | Wt::No);
 	    			messageBox->buttonClicked().connect(std::bind([=] () {
 	    			delete messageBox;
@@ -5381,91 +5746,6 @@ extern void WtAccounts::subscriber_payment_transaction_dialog()
 
 
 
-//
-//			SELECT sum(quantity) FROM account_database.subscriber_transaction WHERE
-//			    subscriber_id IN (SELECT
-//			            subscriber_id
-//			        FROM
-//			            account_database.subscriber
-//			        WHERE
-//			            full_name = 'Амирова  Роза  Сериковна') AND transaction_type='Начисление'
-//			AND  month(transaction_date)='2' AND year(transaction_date)='2017';
-//
-//			// add node form mysql table
-//			query_state=mysql_query(conn, "SELECT * FROM subscriber_services WHERE charging_period = 'Ручное начисление'");
-//			if(query_state!=0)
-//			{
-//				std::cout<<mysql_error(conn)<<std::endl<<std::endl;
-//			}
-//			res=mysql_store_result(conn);
-//			std::cout<<"MySQL Values in the amaDB Table."<<std::endl<<std::endl;
-//			while((row=mysql_fetch_row(res))!=NULL)
-//			{
-//				tree_node  = new Wt::WTreeTableNode(Wt::WString::fromUTF8(row[1]), 0, tree_root);
-//				tree_node ->setColumnWidget(1, new Wt::WText(Wt::WString::fromUTF8(row[7])));
-//			}
-//
-//			mysql_free_result(res);
-
-
-
-
-
-
-
-
-
-	/*
-			ip_address_table->clear();
-			ip_address_table->elementAt(0, 0)->addWidget(new Wt::WText(Wt::WString::fromUTF8("IP адрес")));
-			ip_address_table->elementAt(0, 1)->addWidget(new Wt::WText(Wt::WString::fromUTF8("Устройство")));
-			ip_address_table->elementAt(0, 2)->addWidget(new Wt::WText(Wt::WString::fromUTF8("С")));
-			ip_address_table->elementAt(0, 3)->addWidget(new Wt::WText(Wt::WString::fromUTF8("По")));
-			ip_address_table->elementAt(0, 4)->addWidget(new Wt::WText(Wt::WString::fromUTF8("Тарифный план")));
-			ip_address_table->elementAt(0, 5)->addWidget(new Wt::WText(Wt::WString::fromUTF8("Описание")));
-
-			int row_number = 0;
-
-
-			std::string mysql_ip_address_table_data = "";
-
-			if (operation_name == "create")
-			{
-				mysql_ip_address_table_data = "select device, ip_address, description, date_since, date_by, "
-						  "tariff_plan from ip_addresses where ip_addresses.ip_status = 'not_processed'";
-			} else // operation_name == "edit"
-			{
-				mysql_ip_address_table_data = "select device, ip_address, description, date_since, date_by, "
-						  "tariff_plan from ip_addresses where ip_addresses.subscriber_id = '"+subscriber_id_edit_mode+"'";
-			}
-
-
-			query_state=mysql_query(conn, mysql_ip_address_table_data.c_str());
-			//query_state=mysql_query(conn, "select device, ip_address, description, date_since, date_by, "
-			//							  "tariff_plan from ip_addresses where ip_addresses.ip_status = '"not_processed"'");
-			if(query_state!=0)
-			{
-			   std::cout<<mysql_error(conn)<<std::endl<<std::endl;
-			}
-			res=mysql_store_result(conn);
-			while((row=mysql_fetch_row(res))!=NULL)
-			{
-				row_number++;
-				new Wt::WText(Wt::WString::fromUTF8(row[1]), ip_address_table->elementAt(row_number, 0));
-				new Wt::WText(Wt::WString::fromUTF8(row[0]), ip_address_table->elementAt(row_number, 1));
-				new Wt::WText(Wt::WString::fromUTF8(row[3]), ip_address_table->elementAt(row_number, 2));
-				new Wt::WText(Wt::WString::fromUTF8(row[4]), ip_address_table->elementAt(row_number, 3));
-				new Wt::WText(Wt::WString::fromUTF8(row[5]), ip_address_table->elementAt(row_number, 4));
-				new Wt::WText(Wt::WString::fromUTF8(row[2]), ip_address_table->elementAt(row_number, 5));
-			}
-			ip_address_table->refresh();
-
-
-			mysql_free_result(res);
-			mysql_close(conn);
-*/
-//
-//
 
 	}
 	else
@@ -6158,7 +6438,7 @@ extern void WtAccounts::create_new_select_tariff_dialog_S(std::string operation_
 	    	std::cout<<mysql_error(conn)<<std::endl<<std::endl;
 	    }
 	    res=mysql_store_result(conn);
-	    std::cout<<"MySQL Values in the amaDB Table."<<std::endl<<std::endl;
+	    std::cout<<"MySQL Values in the amaDB Table.13"<<std::endl<<std::endl;
 	    while((row=mysql_fetch_row(res))!=NULL)
 	    {
 
@@ -6224,7 +6504,7 @@ try {
 	    		std::cout<<mysql_error(conn)<<std::endl<<std::endl;
 	    	}
 	    	res=mysql_store_result(conn);
-	    	std::cout<<"MySQL Values in the amaDB Table."<<std::endl<<std::endl;
+	    	std::cout<<"MySQL Values in the amaDB Table.14"<<std::endl<<std::endl;
 
 	    	while((row=mysql_fetch_row(res))!=NULL)
 	    	{
@@ -6611,7 +6891,7 @@ extern void WtAccounts::subscriber_fullName_changed() {
 		   std::cout<<mysql_error(conn)<<std::endl<<std::endl;
 		}
 		res=mysql_store_result(conn);
-		std::cout<<"MySQL Values in the amaDB Table."<<std::endl<<std::endl;
+		std::cout<<"MySQL Values in the amaDB Table.15"<<std::endl<<std::endl;
 		row=mysql_fetch_row(res);
 		subscriber_id_view_mode = boost::lexical_cast<std::string>(row[0]);
 		ui->user_info_groupbox->setTitle(Wt::WString::fromUTF8("Абонент ") + Wt::WString::fromUTF8(row[1]));
@@ -6681,7 +6961,17 @@ extern void WtAccounts::subscriber_fullName_changed() {
 		current_year=ui->year_combo_box->currentText().toUTF8();
 		//check month
 		int ResulMonthCombo_index;
-		ResulMonthCombo_index=ui->month_combo_box->currentIndex();ResulMonthCombo_index++;
+
+		std::string check_date_temp="";
+		ResulMonthCombo_index=ui->month_combo_box->currentIndex();
+		if (ResulMonthCombo_index==0){
+			check_date_temp=std::to_string(std::stoi(current_year)-1)+"-12-31";
+		}else {
+			check_date_temp=current_year+"-"+std::to_string(ResulMonthCombo_index)+"-31";
+		}
+
+         std::cout<<std::endl<<check_date_temp<<"<Last MOnth"<<std::endl;
+		ResulMonthCombo_index++;
 		current_month=std::to_string(ResulMonthCombo_index);
 
 		//current year and month
@@ -6924,20 +7214,21 @@ extern void WtAccounts::subscriber_fullName_changed() {
 			new Wt::WText(Wt::WString::fromUTF8(std::to_string(row4)+" сек"), ui->traffic_call_table->elementAt(row_number, 5));
 		}
 
-
+		std::cout<<"subscriber_id_view_mode  "<<subscriber_id_view_mode<<std::endl;
 
 
 		ui->traffic_call_table->addStyleClass("table form-inline table-bordered table-hover table-condensed table-striped");
 		double Sub_main_dept;
 		double Sub_main_paid;
+		double Sub_last_dept;
 		std::string Sub_main_diffrance;
 
 				mysql_get_ip_address_and_phone_numbers = "SELECT sum(quantity)"
 						"FROM subscriber_transaction "
-						"WHERE subscriber_transaction.transaction_type = 'Начисление'"
+						"WHERE subscriber_transaction.transaction_type = 'Начисление' "
 						"AND MONTH(transaction_date) = '"+current_month+"' "
-						"AND YEAR(transaction_date) = '"+current_year+"'"
-				 "AND subscriber_id ='"+subscriber_id_view_mode+"'";
+						"AND YEAR(transaction_date) = '"+current_year+"' "
+				 "AND subscriber_id='"+subscriber_id_view_mode+"'";
 				query_state=mysql_query(conn, mysql_get_ip_address_and_phone_numbers.c_str());
 
 
@@ -6958,10 +7249,10 @@ extern void WtAccounts::subscriber_fullName_changed() {
 
 				mysql_get_ip_address_and_phone_numbers = "SELECT sum(quantity)"
 						"FROM subscriber_transaction "
-						"WHERE subscriber_transaction.transaction_type = 'Оплата'"
+						"WHERE subscriber_transaction.transaction_type = 'Оплата' "
 						"AND MONTH(transaction_date) = '"+current_month+"' "
-						"AND YEAR(transaction_date) = '"+current_year+"'";
-				 "AND subscriber_id ='"+subscriber_id_view_mode+"'";
+						"AND YEAR(transaction_date) = '"+current_year+"' "
+				 "AND subscriber_id='"+subscriber_id_view_mode+"'";
 				query_state=mysql_query(conn, mysql_get_ip_address_and_phone_numbers.c_str());
 
 
@@ -6979,16 +7270,11 @@ extern void WtAccounts::subscriber_fullName_changed() {
 					mysql_free_result(add_res);
 				}
 
-				Sub_main_diffrance = std::to_string(Sub_main_dept-Sub_main_paid);
-				ui->debt_edit->setText(Wt::WString::fromUTF8(Sub_main_diffrance));
 
 
-				mysql_get_ip_address_and_phone_numbers = "SELECT quantity "
-						"FROM subscriber_transaction "
-						"WHERE subscriber_transaction.transaction_type = 'Долг' "
-						"AND MONTH(transaction_date) = '"+current_month+"' "
-						"AND YEAR(transaction_date) = '"+current_year+"'";
-				"AND subscriber_id ='"+subscriber_id_view_mode+"'";
+              try {
+				mysql_get_ip_address_and_phone_numbers = "SELECT sum(quantity) FROM account_database.subscriber_transaction where subscriber_id ='"+subscriber_id_view_mode+"'  and  transaction_date between '2014-02-03' and str_to_date('"+check_date_temp+"', '%Y-%m-%d') and transaction_type = 'Начисление'";
+
 				query_state=mysql_query(conn, mysql_get_ip_address_and_phone_numbers.c_str());
 
 				if(query_state!=0)
@@ -6999,14 +7285,35 @@ extern void WtAccounts::subscriber_fullName_changed() {
 				row=mysql_fetch_row(add_res);
 				if (row != NULL)
 				{
-					if (row[0]!=NULL){Sub_main_paid=boost::lexical_cast<double>(row[0]);
-					ui->initial_debt_edit->setText(Wt::WString::fromUTF8(row[0]));}
-					else ui->initial_debt_edit->setText(Wt::WString::fromUTF8("0"));
+					if (row[0]!=NULL){Sub_last_dept=boost::lexical_cast<double>(row[0]);
+					ui->initial_debt_edit->setText(std::to_string(Sub_last_dept));
+					}else ui->initial_debt_edit->setText(Wt::WString::fromUTF8("0"));
+					mysql_free_result(add_res);
+				}
+
+				mysql_get_ip_address_and_phone_numbers = "SELECT sum(quantity) FROM account_database.subscriber_transaction where subscriber_id ='"+subscriber_id_view_mode+"'  and  transaction_date between '2014-02-03' and str_to_date('"+check_date_temp+"', '%Y-%m-%d') and transaction_type = 'Оплата'";
+
+				query_state=mysql_query(conn, mysql_get_ip_address_and_phone_numbers.c_str());
+
+				if(query_state!=0)
+				{
+					std::cout<<mysql_error(conn)<<std::endl<<std::endl;
+				}
+				add_res=mysql_store_result(conn);
+				row=mysql_fetch_row(add_res);
+				if (row != NULL)
+				{
+					if (row[0]!=NULL){Sub_last_dept=Sub_last_dept-boost::lexical_cast<double>(row[0]);
+					ui->initial_debt_edit->setText(std::to_string(Sub_last_dept));}
 					mysql_free_result(add_res);
 				}
 
 
 
+                double Sub_main_diffrance_number = Sub_main_dept+Sub_last_dept-Sub_main_paid;
+				Sub_main_diffrance = std::to_string(Sub_main_diffrance_number);
+				ui->debt_edit->setText(Sub_main_diffrance);
+              } catch (const std::exception& e) {std::cout <<"Get Dept calculation -> "<< e.what()<<std::endl;}
 
 
 
@@ -7045,8 +7352,8 @@ extern void WtAccounts::search_subscribers(std::string operation_name) {
 	ResultOf_Search = ui->user_search_edit->text().toUTF8();
 
 	if (ResultOf_Search == "")
-	{
-		std::cout << "Adilbek Cool!!!";
+	{   try {
+		std::cout << "Empty Search Start"<<std::endl;
 		//subscriber_show_operation_tab("view");
 
 		mysql_init(&mysql);
@@ -7070,7 +7377,7 @@ extern void WtAccounts::search_subscribers(std::string operation_name) {
 		}
 		res=mysql_store_result(conn);
 		std::string mysql_get_subscriber_fullName = "";
-		std::cout<<"MySQL Values in the amaDB Table."<<std::endl<<std::endl;
+		std::cout<<"MySQL Values in the amaDB Table.16"<<std::endl<<std::endl;
 		while((row=mysql_fetch_row(res))!=NULL)
 		{
 			ui->user_tree_group  = new Wt::WTreeTableNode(Wt::WString::fromUTF8(row[1]), 0, ui->user_tree_root);
@@ -7095,10 +7402,12 @@ extern void WtAccounts::search_subscribers(std::string operation_name) {
 		mysql_close(conn);
 
 		ui->user_tree_root->expand();
-
+		std::cout << "Empty Search End"<<std::endl;
+	} catch (const std::exception& e) {std::cout <<"Search 1 -> "<< e.what()<<std::endl;}
 	}
 	else
-	{
+	{  try {
+		std::cout << "Search Start"<<std::endl;
 		mysql_init(&mysql);
 		conn=mysql_real_connect(&mysql, server, user, password, database, 0, 0, 0);
 		if(conn==NULL)
@@ -7152,6 +7461,8 @@ extern void WtAccounts::search_subscribers(std::string operation_name) {
 		mysql_close(conn);
 
 		ui->user_tree_root->expand();
+		std::cout << "Search End"<<std::endl;
+	} catch (const std::exception& e) {std::cout <<"create_phone_number_dialog -> "<< e.what()<<std::endl;}
 	}
 }
 
@@ -7246,6 +7557,7 @@ ResultOfoperationmeny=ui->p_account_operation_split_button_popup->result()->text
 					//PDF
 				Wt::WResource *pdf = new ReportResource(service_table_container,0);
 				//service_table_container
+
 				Wt::WPushButton *button2 = new Wt::WPushButton(Wt::WString::fromUTF8("Создать Отчет"),CHECK_pop_tab_Temp);
 //CHECK_pop_tab_Temp
 				button2->setLink(pdf);
@@ -7489,11 +7801,11 @@ out2<<std::endl;
 
 
 //func to make creat report
-extern void WtAccounts::p_account_operation_create_Report(std::string operation_name)
+extern void WtAccounts::p_account_operation_create_Report(std::string operation_name,std::string user_name)
 {
 
 	//if (operation_name=="fast") std::cout<<"whats wrong"<<std::endl;
-
+	std::cout<<"OPERATION NAME "<<operation_name<<std::endl;
 //
 int total_sum=0;
 	Wt::WMessageBox *messageBox;
@@ -7505,8 +7817,16 @@ int total_sum=0;
 
 		//check month
 		int ResulMonthCombo_index;
-		ResulMonthCombo_index=ui->month_combo_box->currentIndex();ResulMonthCombo_index++;
+		ResulMonthCombo_index=ui->month_combo_box->currentIndex();
+		std::string check_date_temp="";
 
+		if (ResulMonthCombo_index==0){
+			check_date_temp=std::to_string(std::stoi(ResulYearCombo)-1)+"-12-31";
+		}else {
+			check_date_temp=ResulYearCombo+"-"+std::to_string(ResulMonthCombo_index)+"-31";
+		}
+		std::cout<<"Last month for bept for report"<<check_date_temp<<std::endl;
+		ResulMonthCombo_index++;
 		std::string ResulMonthCombo_index_string=std::to_string(ResulMonthCombo_index);
 		std::string ResulMonthCombo_text_string=ui->month_combo_box->currentText().toUTF8();
 
@@ -7515,17 +7835,24 @@ int total_sum=0;
 		//if (operation_name=="fast") std::cout<<"whats wrong15"<<std::endl;
 
 		std::string changedSubscriberName = "";
+
 		Wt::WTreeNode *selected_node; // operator* returns contents of an interator
 		std::set<Wt::WTreeNode* > highlightedRows = ui->user_treeTable->tree()->selectedNodes();
 		//if (operation_name=="fast") std::cout<<"whats wrong21"<<std::endl;
-		if (!highlightedRows.empty())
-						{
-		//get name that selected
+		if (!highlightedRows.empty() || operation_name=="month"){
+
+			if (operation_name=="month"){
+				changedSubscriberName = user_name;
+				std::cout<<"REPORT for month for "<<user_name<<std::endl;
+				//changedSubscriberName="Амирова Роза Сериковна";}
+			}else{
 		for (std::set<Wt::WTreeNode* >::iterator i = highlightedRows.begin(); i != highlightedRows.end(); ++i)
 									     					{
 									     					  selected_node = *i;
 									     					}
 			changedSubscriberName = selected_node->label()->text().toUTF8();
+			}
+
 			//if (operation_name=="fast") std::cout<<"whats wrong22"<<std::endl;
 
 			//creat tab
@@ -7568,12 +7895,12 @@ int total_sum=0;
 								 std::cout<<mysql_error(conn)<<std::endl<<std::endl;
 								   }
 								   res=mysql_store_result(conn);
-								    std::cout<<"MySQL Values in the amaDB Table. Report"<<std::endl<<std::endl;
+								    std::cout<<"MySQL Values in the amaDB Table.17 Report"<<std::endl<<std::endl;
 								    std::string Presonal_code="";
 								    std::string agreement="";
 								    if((row=mysql_fetch_row(res))!=NULL) {
 
-
+								    	if (operation_name=="month"){subscriber_id_view_mode=row[1];}
 						     				Presonal_code=row[2];
 						     				agreement=row[7];}
 
@@ -7694,7 +8021,7 @@ int total_sum=0;
 						    res=mysql_store_result(conn);
 						    numberforskip=0;
 
-						    std::cout<<"MySQL Values in the amaDB Table. Report2"<<std::endl<<std::endl;
+						    std::cout<<"MySQL Values in the amaDB Table.18 Report2"<<std::endl<<std::endl;
 
 						    if((row=mysql_fetch_row(res))!=NULL) {
 
@@ -7706,7 +8033,7 @@ int total_sum=0;
 						   out3.replace(f,std::string("ServicePrice").length(), row[1]);
 						   total_sum+=std::atoi(row[1]);
 
-						   std::cout<<"MySQL Values in the amaDB Table. "<<row[0]<<std::endl<<std::endl;
+						   std::cout<<"MySQL Values in the amaDB Table.19 "<<row[0]<<std::endl<<std::endl;
 
 
 						    //if more than 1
@@ -7733,11 +8060,12 @@ int total_sum=0;
 
 									      mysql_free_result(res);
 
-									      int debt_cost=0;
-									      int debt_last_mouth=0;
+									      double debt_cost=0;
+									      double debt_last_mouth=0;
+									      double paid_this_month=0;
 									      std::string Sum_to_this_mouth="";
-									      Sum_to_this_mouth = "SELECT quantity FROM account_database.subscriber_transaction WHERE subscriber_id='"+subscriber_id_view_mode+"'"
-									      "AND  month(transaction_date)=month(str_to_date('"+ResulMonthCombo_index_string+"','%m'))-1 AND year(transaction_date)=year(str_to_date('"+ResulYearCombo+"','%Y')) AND transaction_type='Долг'";
+
+									      Sum_to_this_mouth = "SELECT sum(quantity) FROM account_database.subscriber_transaction where subscriber_id ='"+subscriber_id_view_mode+"'  and  transaction_date between '2014-02-03' and str_to_date('"+check_date_temp+"', '%Y-%m-%d') and transaction_type = 'Начисление'";
 									      query_state = mysql_query(conn, Sum_to_this_mouth.c_str());
 									      if(query_state!=0)
 									      {
@@ -7747,16 +8075,14 @@ int total_sum=0;
 
 									      if ((row=mysql_fetch_row(res))!=NULL)
 									      {
-									    	  debt_last_mouth=std::atoi(row[0]);
-									      } else debt_last_mouth=0;
+									    	  if (row[0]!=NULL)
+									    	  debt_last_mouth=boost::lexical_cast<double>(row[0]);
+									    	  mysql_free_result(res);
+									      }
+                                             std::cout<<std::endl<<" 1 "<<debt_last_mouth<<std::endl;
 
-									      mysql_free_result(res);
-
-									      Sum_to_this_mouth = "SELECT quantity,transaction_id FROM account_database.subscriber_transaction WHERE subscriber_id='"+subscriber_id_view_mode+"'"
-									    "AND  month(transaction_date)=month(str_to_date('"+ResulMonthCombo_index_string+"','%m'))"
-									    " AND year(transaction_date)=year(str_to_date('"+ResulYearCombo+"','%Y')) AND transaction_type='Долг'";
+									      Sum_to_this_mouth = "SELECT sum(quantity) FROM account_database.subscriber_transaction where subscriber_id ='"+subscriber_id_view_mode+"' and transaction_date between '2014-02-03' and str_to_date('"+check_date_temp+"', '%Y-%m-%d') and transaction_type='Оплата'";
 									      query_state = mysql_query(conn, Sum_to_this_mouth.c_str());
-
 									      if(query_state!=0)
 									      {
 									    	  std::cout<<mysql_error(conn)<<std::endl<<std::endl;
@@ -7765,37 +8091,36 @@ int total_sum=0;
 
 									      if ((row=mysql_fetch_row(res))!=NULL)
 									      {
-									    	  std::cout<<"FOUND "<<row[0]<<std::endl;
-									    	  debt_cost=std::atoi(row[0]);
-                                        	  mysql_free_result(res);
+									    	  if (row[0]!=NULL)
+									    		  debt_last_mouth=debt_last_mouth-boost::lexical_cast<double>(row[0]);
+									    	  mysql_free_result(res);
 									      }
-									      else
-									      {	 std::cout<<"FOUND NOT"<<std::endl;
-									    	  debt_cost+=debt_last_mouth;
-									        debt_cost+=total_sum;
+									      std::cout<<std::endl<<" 2 "<<debt_last_mouth<<std::endl;
 
-									    	  Sum_to_this_mouth = "INSERT INTO subscriber_transaction (subscriber_id, transaction_type, "
-									    			  "transaction_date, description, quantity)  "
-									    			  "VALUES ('"+subscriber_id_view_mode+"', 'Долг', "
-													  "str_to_date('1,'"+ResulMonthCombo_index_string+"','"+ResulYearCombo+"'', '%d,%m,%Y'), 'Пересчет,прибовляем сумму долга прошлого месяца к стоимости услуг в этом, онимаем оплаченые', '"+std::to_string(debt_cost)+"')";
+									    debt_cost+=debt_last_mouth;
+									    debt_cost+=total_sum;
 
-									    	  query_state = mysql_query(conn, Sum_to_this_mouth.c_str());
+									    Sum_to_this_mouth = "SELECT sum(quantity) FROM account_database.subscriber_transaction WHERE subscriber_id='"+subscriber_id_view_mode+"'"
+									    							"AND  month(transaction_date)=month(str_to_date('"+ResulMonthCombo_index_string+"','%m')) AND year(transaction_date)=year(str_to_date('"+ResulYearCombo+"','%Y')) AND transaction_type='Оплата'";
 
+									    query_state = mysql_query(conn, Sum_to_this_mouth.c_str());
+									    if(query_state!=0)
+									    {
+									    	std::cout<<mysql_error(conn)<<std::endl<<std::endl;
+									    }
+									    res=mysql_store_result(conn);
 
-									    	  if(query_state!=0)
-									    	  {
-									    		  std::cout<<mysql_error(conn)<<std::endl<<std::endl;
-									    	  }
-
-
-
-
-
-
-									      }
+									    if ((row=mysql_fetch_row(res))!=NULL)
+									    {
+									    	if (row[0]!=NULL)
+									    	paid_this_month=boost::lexical_cast<double>(row[0]);
+									    	mysql_free_result(res);
+									    }
 
 
-										  mysql_close(conn);
+									    std::cout<<std::endl<<" 3 "<<paid_this_month<<std::endl;
+
+									    mysql_close(conn);
 
 
 										  f = out3.find("Total_TO_PAY");
@@ -7811,16 +8136,16 @@ int total_sum=0;
 										  f = out3.find("COL_3");
 										  out3.replace(f, std::string("COL_3").length(), "0");
 										  f = out3.find("COL_4");
-										  out3.replace(f, std::string("COL_4").length(), std::to_string((debt_last_mouth+total_sum)-debt_cost));
+										  out3.replace(f, std::string("COL_4").length(), std::to_string(paid_this_month));
 
 										  f = out3.find("COL_5");
+										  out3.replace(f, std::string("COL_5").length(), std::to_string(debt_cost-paid_this_month));
 										  if (debt_cost<0) debt_cost=0;
-										  out3.replace(f, std::string("COL_5").length(), std::to_string(debt_cost));
 
 										  f = out3.find("TT_P");
-										  out3.replace(f, std::string("TT_P").length(),std::to_string(debt_cost));
+										  out3.replace(f, std::string("TT_P").length(),std::to_string(total_sum));
 										  f = out3.find("TT_P");
-										  out3.replace(f, std::string("TT_P").length(),std::to_string(debt_cost));
+										  out3.replace(f, std::string("TT_P").length(),std::to_string(debt_cost-paid_this_month));
 
 
 
@@ -7843,32 +8168,47 @@ int total_sum=0;
 
 
              //creat pdf with contructor
-			 Wt::WResource *pdf = new ReportResource(service_table_container,changedSubscriberName,out3);
+
            //  Wt::WPushButton *button2 = new Wt::WPushButton("Create pdf",service_table_container);
+//oleg
 
 
+
+
+			// Wt::WPushButton *tempb;
 			  //link to rendered  file
-		//	 button2->setLink(pdf);
-			 Wt::WApplication::redirect(pdf->url());//link to pdf to download
+			// tempb->setLink(pdf);
+
+			if (operation_name=="month")
+			 {  std::cout<<"Creat Pdf func month 52"<<std::endl;
+				 WtAccounts::creat_pdf_monthly(changedSubscriberName,out3);
+			 } else
+			 {          std::cout<<"Creat Pdf func link 53"<<std::endl;
+			 			Wt::WResource *pdf = new ReportResource(service_table_container,changedSubscriberName,out3);
+			 			Wt::WApplication::redirect(pdf->url());//link to pdf to download
+			 }
+
+
 
 
 				    }
 				    else {
+				    	 if (operation_name!="month"){//if not auto report form
 						messageBox = new Wt::WMessageBox(Wt::WString::fromUTF8("Ошибка"), Wt::WString::fromUTF8("Нет данных по этой дате"), Wt::Information, Wt::Yes | Wt::No);
 						messageBox->buttonClicked().connect(std::bind([=] () {
 						delete messageBox;
 						}));
 
-						messageBox->show();
+						messageBox->show();}
 					}
 						}else
-						{
+						{   if (operation_name!="month"){//if not auto report form
 							messageBox = new Wt::WMessageBox(Wt::WString::fromUTF8("Ошибка"), Wt::WString::fromUTF8("Не выбран абонент"), Wt::Information, Wt::Yes | Wt::No);
 							messageBox->buttonClicked().connect(std::bind([=] () {
 							delete messageBox;
 							}));
 
-							messageBox->show();
+							messageBox->show();}
 						}
 
 
@@ -8060,7 +8400,7 @@ extern void WtAccounts::p_account_outside_call_create_Report_(std::string operat
 
 
 
-							std::cout<<"MySQL Values in the amaDB Table. "<<row[0]<<std::endl<<std::endl;
+							std::cout<<"MySQL Values in the amaDB Table.20 "<<row[0]<<std::endl<<std::endl;
 
 
 							//if more than 1
@@ -8156,7 +8496,7 @@ extern void WtAccounts::p_account_outside_call_create_Report_(std::string operat
 
 
 
-							std::cout<<"MySQL Values in the amaDB Table. "<<row[0]<<std::endl<<std::endl;
+							std::cout<<"MySQL Values in the amaDB Table.21 "<<row[0]<<std::endl<<std::endl;
 
 
 							//if more than 1
@@ -8234,8 +8574,7 @@ extern void WtAccounts::p_account_outside_call_create_Report_(std::string operat
 
 
 	             //creat pdf with contructor
-				 Wt::WResource *pdf = new ReportResource(service_table_container,changedSubscriberName,out3);
-	           //  Wt::WPushButton *button2 = new Wt::WPushButton("Create pdf",service_table_container);
+				Wt::WResource *pdf = new ReportResource(service_table_container,changedSubscriberName,out3);
 
 				  //link to rendered  file
 				 Wt::WApplication::redirect(pdf->url());//link to pdf to download
@@ -8296,7 +8635,7 @@ Wt::WPushButton *add2_service_button = new Wt::WPushButton(Wt::WString::fromUTF8
 	                    // Accept the dialog
 	                //    save_exit_button->setLink()
 	                    save_exit_button->clicked().connect(std::bind([=] () {
-	                      WtAccounts::p_account_operation_create_Report("edit");
+	                      WtAccounts::p_account_operation_create_Report("edit","");
 
 	                       dor=1;dialog->accept();delete dialog;
 	                    }));
@@ -8394,7 +8733,7 @@ if (Wt::WString::fromUTF8("Телефонный трафик")==Wt::WString::fro
 
 //Generate report ( check if user selected  inside func)
 if (Wt::WString::fromUTF8("Новый отчет")==Wt::WString::fromUTF8(ResultOfoperationmeny)){
-	WtAccounts::p_account_operation_create_Report("edit");}
+	WtAccounts::p_account_operation_create_Report("edit","");}
 
 if (Wt::WString::fromUTF8("Создать отчет")==Wt::WString::fromUTF8(ResultOfoperationmeny)){
 				p_account_operation_Report("Новый отчет");}
@@ -8402,11 +8741,69 @@ if (Wt::WString::fromUTF8("Создать отчет")==Wt::WString::fromUTF8(Re
 
 }
 
+//send report to all users with mail
 
 
 ///
+extern void WtAccounts::send_mail_to_users(){
+  std::string abonent_name="";
+  std::string mail_adress="";
+  FILE* hFile=NULL;
+	try {
+
+	mysql_init(&mysql);
+	conn=mysql_real_connect(&mysql, server, user, password, database, 0, 0, 0);
+	if(conn==NULL)
+	{
+		std::cout<<mysql_error(&mysql)<<std::endl<<std::endl;
+	}
+	mysql_query(&mysql,"SET NAMES 'UTF8'");
+
+
+	std::string mysql_Data_for_report = "SELECT full_name,user_email FROM account_database.subscriber where user_email!=''";
+
+	query_state=mysql_query(conn, mysql_Data_for_report.c_str());
+	if(query_state!=0)
+	{
+		std::cout<<mysql_error(conn)<<std::endl<<std::endl;
+	}
+	res_mail=mysql_store_result(conn);
+	while((row_mail=mysql_fetch_row(res_mail))!=NULL)
+			{
+		abonent_name=boost::lexical_cast<std::string>(row_mail[0]);
+		mail_adress=boost::lexical_cast<std::string>(row_mail[1]);
+
+		std::string patch="/home/judge/Documents/";
+		patch+=abonent_name+".pdf";
+//.substr(0,2)+
+		std::cout<<"Wait 1"<<patch<<std::endl;
+		std::cout<<"Wait 2"<<mail_adress<<std::endl;
+
+
+		WtAccounts::p_account_operation_create_Report("month",abonent_name);
+		//usleep(1000000);
+		        hFile = fopen(patch.c_str(),"rb");
+		        if(!hFile) {
+		             std::cout << "File not found 245" << std::endl;
+		        }else {
+		        WtAccounts::send_email("esep@automation-trade.com",mail_adress,"Квитанция.pdf",patch);
+		        fclose(hFile);}
 
 
 
 
+		std::cout<<"End of WAIT3 "<<mail_adress<<std::endl;
+	}
+	mysql_free_result(res_mail);
+	mysql_close(conn);
+
+	std::cout<<"start sending to "<<mail_adress<<std::endl;
+
+
+
+	std::cout<<"end send"<<std::endl;
+
+} catch (const std::exception& e) {std::cout <<"Creat report -> "<< e.what()<<std::endl;}
+}
+///
 // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

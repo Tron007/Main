@@ -68,15 +68,21 @@ public:
 	//report
 	void p_account_operation_Report(std::string operation_name);
 	void p_account_outside_call_create_Report_(std::string operation_name);
-	void p_account_operation_create_Report(std::string operation_name);
+	void p_account_operation_create_Report(std::string operation_name,std::string user_name);
 	void Configure_edited_report_data_Report(std::string operation_name);
 	//Serarch
 	void search_subscribers(std::string operation_name);
     //check tabs that was closed
 	void checkIndex_TAB_close(int);
+	//send mail to users
+	void send_mail_to_users();
+	size_t send_email(std::string FROM, std::string TO, std::string FILENAME, std::string FILEPATH);
+	void creat_pdf_monthly(std::string name_ab,std::string text);
+
 
 	void month_button_fastswitch(int);
-
+	//debt dialog insertion
+	void subscriber_initial_debt_dialog();
 
 private:
 	Ui_WtAccounts *ui;
